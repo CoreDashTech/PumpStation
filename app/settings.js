@@ -2,7 +2,12 @@
 (function () {
   'use strict';
   var A = APP, $ = A.$, $$ = A.$$, esc = A.esc;
+  var LIGHT = ['cream', 'pearl', 'softwhite', 'sage'];
   var BGS = [
+    { id: 'cream', name: 'ครีม', sub: 'Classic Cream', light: true },
+    { id: 'pearl', name: 'ขาวมุก', sub: 'Pearl White', light: true },
+    { id: 'softwhite', name: 'ขาวนวล', sub: 'Soft White', light: true },
+    { id: 'sage', name: 'เขียวถนอมสายตา', sub: 'Soft Sage', light: true },
     { id: 'grid', name: 'ตารางน้ำเงิน', sub: 'Navy Grid' },
     { id: 'aurora', name: 'ออโรร่า', sub: 'Aurora Glow' },
     { id: 'ocean', name: 'มหาสมุทร', sub: 'Deep Ocean' },
@@ -10,16 +15,20 @@
     { id: 'plain', name: 'เรียบ', sub: 'Plain' }
   ];
   var ACCENTS = [['#2F6BFF', 'Blue'], ['#0891B2', 'Cyan'], ['#16A34A', 'Green'], ['#7C3AED', 'Violet'], ['#EA580C', 'Orange'], ['#E11D48', 'Rose']];
-  function get() { return A.ls('appearance', null) || { bg: 'grid', accent: '#2F6BFF', station: { preset: 'navy', custom: {} } }; }
-  function save(a) { A.lsSet('appearance', a); apply(a); }
+  function get() { return A.ls('appearance2', null) || { bg: 'cream', accent: '#2F6BFF', station: { preset: 'navy', custom: {} }, lastLight: 'cream', lastDark: 'grid' }; }
+  function save(a) { if (LIGHT.indexOf(a.bg) >= 0) a.lastLight = a.bg; else a.lastDark = a.bg; A.lsSet('appearance2', a); apply(a); }
   function lighten(hex, amt) { var n = parseInt(hex.slice(1), 16), r = n >> 16, g = n >> 8 & 255, b = n & 255; r = Math.round(r + (255 - r) * amt); g = Math.round(g + (255 - g) * amt); b = Math.round(b + (255 - b) * amt); return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1); }
   function apply(a) {
     a = a || get();
-    var b = document.body; BGS.forEach(function (x) { b.classList.remove('bg-' + x.id); }); b.classList.add('bg-' + (a.bg || 'grid'));
+    var b = document.body; BGS.forEach(function (x) { b.classList.remove('bg-' + x.id); }); b.classList.add('bg-' + (a.bg || 'cream'));
+    var light = LIGHT.indexOf(a.bg || 'cream') >= 0, th = light ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', th); A.lsSet('theme', th);
+    var m = document.querySelector('meta[name=theme-color]'); if (m) m.content = getComputedStyle(b).getPropertyValue('--bg').trim() || (light ? '#F7F2E7' : '#081230');
     var r = document.documentElement.style; r.setProperty('--blue', a.accent || '#2F6BFF'); r.setProperty('--blue2', lighten(a.accent || '#2F6BFF', 0.28));
     $$('.st-scene, .st-preview').forEach(function (el) { STATION.apply(el); });
   }
   A.applyAppearance = apply;
+  A.toggleTheme = function () { var a = get(); a.bg = LIGHT.indexOf(a.bg) >= 0 ? (a.lastDark || 'grid') : (a.lastLight || 'cream'); save(a); if (A.route) A.route(); };
   document.addEventListener('DOMContentLoaded', function () { apply(); });
 
   function miniScene(colors) {
@@ -36,15 +45,17 @@
 
   A.PAGES.settings = {
     render: function (v) {
-      var a = get(), self = this, lang = (window.I18N && I18N.lang()) || 'th', theme = document.documentElement.getAttribute('data-theme');
+      var a = get(), self = this, lang = (window.I18N && I18N.lang()) || 'th', theme = LIGHT.indexOf(a.bg) >= 0 ? 'light' : 'dark';
       var st = a.station || { preset: 'navy', custom: {} }, cols = STATION.colors();
+      function bgBtn(b) { return '<button class="bg-opt' + (a.bg === b.id ? ' on' : '') + '" data-bg="' + b.id + '" aria-pressed="' + (a.bg === b.id) + '"><span class="bg-sw bgsw-' + b.id + '"></span><b>' + b.name + '</b><small>' + b.sub + '</small></button>'; }
       v.innerHTML =
         '<div class="grid g2">' +
         '<div class="card"><div class="card-h"><h3>ภาษา / Language</h3></div><div class="tabs" role="group" aria-label="ภาษา"><button data-lang="th" class="' + (lang === 'th' ? 'on' : '') + '">ไทย</button><button data-lang="en" class="' + (lang === 'en' ? 'on' : '') + '">English</button></div><p class="muted" style="font-size:13px;margin:10px 0 0">เปลี่ยนภาษาทั้งระบบทันที รวมถึงแจ้งเตือนบนหน้าจอและรายงาน</p></div>' +
         '<div class="card"><div class="card-h"><h3>ธีม</h3></div><div class="tabs" role="group" aria-label="ธีม"><button data-theme-set="dark" class="' + (theme === 'dark' ? 'on' : '') + '">มืด</button><button data-theme-set="light" class="' + (theme === 'light' ? 'on' : '') + '">สว่าง</button></div><p class="muted" style="font-size:13px;margin:10px 0 0">ธีมมืดเหมาะกับห้องควบคุม ธีมสว่างเหมาะกับการพิมพ์รายงาน</p></div>' +
         '</div>' +
-        '<div class="card" style="margin-top:16px"><div class="card-h"><h3>พื้นหลัง</h3></div><div class="bg-pick">' +
-        BGS.map(function (b) { return '<button class="bg-opt' + (a.bg === b.id ? ' on' : '') + '" data-bg="' + b.id + '" aria-pressed="' + (a.bg === b.id) + '"><span class="bg-sw bgsw-' + b.id + '"></span><b>' + b.name + '</b><small>' + b.sub + '</small></button>'; }).join('') + '</div></div>' +
+        '<div class="card" style="margin-top:16px"><div class="card-h"><h3>พื้นหลัง</h3></div><div class="bg-group">โทนสว่าง · สบายตา</div><div class="bg-pick">' +
+        BGS.filter(function (b) { return b.light; }).map(bgBtn).join('') + '</div><div class="bg-group">โทนมืด · ห้องควบคุม</div><div class="bg-pick">' +
+        BGS.filter(function (b) { return !b.light; }).map(function (b) { return '<button class="bg-opt' + (a.bg === b.id ? ' on' : '') + '" data-bg="' + b.id + '" aria-pressed="' + (a.bg === b.id) + '"><span class="bg-sw bgsw-' + b.id + '"></span><b>' + b.name + '</b><small>' + b.sub + '</small></button>'; }).join('') + '</div></div>' +
         '<div class="card" style="margin-top:16px"><div class="card-h"><h3>สีหลักของระบบ</h3></div><div class="row">' +
         ACCENTS.map(function (c) { return '<button class="acc' + (a.accent === c[0] ? ' on' : '') + '" data-acc="' + c[0] + '" style="--c:' + c[0] + '" aria-label="' + c[1] + '" aria-pressed="' + (a.accent === c[0]) + '"></button>'; }).join('') +
         '<label class="row" style="flex-direction:row;align-items:center;gap:8px;margin-left:8px">กำหนดเอง <input type="color" id="accCustom" value="' + (a.accent || '#2F6BFF') + '" style="width:48px;height:40px;padding:2px;border-radius:10px"></label></div></div>' +
@@ -54,7 +65,7 @@
         STATION.KEYS.map(function (k) { return '<label class="colk"><input type="color" data-ck="' + k + '" value="' + cols[k] + '"><span>' + STATION.KEY_LABEL[k] + '</span></label>'; }).join('') + '</div>' +
         '<div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost sm" id="stReset">คืนค่าสีเริ่มต้น</button></div></div>';
       $$('[data-lang]', v).forEach(function (b) { b.onclick = function () { if (window.I18N) I18N.set(b.getAttribute('data-lang')); self.render(v); }; });
-      $$('[data-theme-set]', v).forEach(function (b) { b.onclick = function () { A.setTheme(b.getAttribute('data-theme-set')); }; });
+      $$('[data-theme-set]', v).forEach(function (b) { b.onclick = function () { var want = b.getAttribute('data-theme-set'), x = get(), isL = LIGHT.indexOf(x.bg) >= 0; if ((want === 'light') !== isL) { x.bg = want === 'light' ? (x.lastLight || 'cream') : (x.lastDark || 'grid'); save(x); } self.render(v); }; });
       $$('[data-bg]', v).forEach(function (b) { b.onclick = function () { var x = get(); x.bg = b.getAttribute('data-bg'); save(x); self.render(v); }; });
       $$('[data-acc]', v).forEach(function (b) { b.onclick = function () { var x = get(); x.accent = b.getAttribute('data-acc'); save(x); self.render(v); }; });
       $('#accCustom', v).oninput = function () { var x = get(); x.accent = this.value; save(x); };

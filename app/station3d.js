@@ -14,7 +14,7 @@
   };
   var KEYS = ['floor', 'line', 'pipe', 'water', 'pump', 'casing', 'cabinet', 'tank'];
   var KEY_LABEL = { floor: 'พื้นสถานี', line: 'เส้นตาราง', pipe: 'ท่อ', water: 'น้ำไหล', pump: 'มอเตอร์ปั๊ม', casing: 'ตัวเรือนปั๊ม', cabinet: 'ตู้ควบคุม', tank: 'ถังน้ำ' };
-  function stationColors() { var a = A.ls('appearance', {}) || {}; var base = PRESETS[(a.station && a.station.preset) || 'navy'] || PRESETS.navy; var c = {}; KEYS.forEach(function (k) { c[k] = (a.station && a.station.custom && a.station.custom[k]) || base[k]; }); return c; }
+  function stationColors() { var a = A.ls('appearance2', {}) || {}; var base = PRESETS[(a.station && a.station.preset) || 'navy'] || PRESETS.navy; var c = {}; KEYS.forEach(function (k) { c[k] = (a.station && a.station.custom && a.station.custom[k]) || base[k]; }); return c; }
   function applyStationVars(el) { var c = stationColors(); KEYS.forEach(function (k) { el.style.setProperty('--st-' + k, c[k]); }); }
 
   // ---------- isometric helpers
@@ -64,9 +64,9 @@
     var e = OX + (372 - 36) * C, f = OY + (372 + 36) * H - 12 - 100;
     o.push('<g transform="matrix(' + C + ' ' + H + ' 0 1 ' + e.toFixed(2) + ' ' + f.toFixed(2) + ')">' +
       '<rect x="8" y="40" width="44" height="32" rx="2" fill="#071233"/><polyline id="stHmi" points="" fill="none" stroke="#3CF08C" stroke-width="1.3"/>' +
-      '<text x="10" y="47" font-size="5" fill="#9FB0DE" font-family="Space Grotesk">PT bar</text>' +
+      '<text x="10" y="47" font-size="5" fill="#9FB0DE" font-family="Sarabun">PT bar</text>' +
       '<circle id="stLedRun" cx="12" cy="84" r="3" fill="#22C55E"/><circle id="stLedPh" cx="21" cy="84" r="3" fill="#22C55E"/><circle cx="46" cy="84" r="4.5" fill="#E53935"/>' +
-      '<text x="8" y="18" font-size="6" fill="#4A5570" font-family="Space Grotesk">MCC · PLC FX5U</text><text x="8" y="28" font-size="5" fill="#6A7590" font-family="Space Grotesk">HMI 10″ · UPS</text></g>');
+      '<text x="8" y="18" font-size="6" fill="#4A5570" font-family="Sarabun">MCC · PLC FX5U</text><text x="8" y="28" font-size="5" fill="#6A7590" font-family="Sarabun">HMI 10″ · UPS</text></g>');
     var an = P(418, 20, 112), an2 = P(418, 20, 142);
     o.push('<line x1="' + an[0].toFixed(1) + '" y1="' + an[1].toFixed(1) + '" x2="' + an2[0].toFixed(1) + '" y2="' + an2[1].toFixed(1) + '" stroke="#9FB0DE" stroke-width="2.4"/>');
     for (var k = 0; k < 3; k++) o.push('<circle class="st-ripple" cx="' + an2[0].toFixed(1) + '" cy="' + an2[1].toFixed(1) + '" r="16" fill="none" stroke="#4DA3FF" stroke-width="1.8" style="animation-delay:-' + (k * 0.8) + 's;transform-origin:' + an2[0].toFixed(1) + 'px ' + an2[1].toFixed(1) + 'px"/>');
@@ -99,7 +99,7 @@
     o.push(pipe([[330, 87, 44], [330, 167, 44]], 13, 'header'));
     o.push(pipe([[330, 130, 44], [440, 130, 44]], 13, 'header'));
     o.push(cyl(385, 130, 34, 12, 20, 'tank'));
-    var fm = P(385, 130, 56); o.push('<text x="' + fm[0].toFixed(1) + '" y="' + (fm[1] - 8).toFixed(1) + '" text-anchor="middle" font-size="10" fill="#7FE3FF" font-family="Space Grotesk">FT-01</text>');
+    var fm = P(385, 130, 56); o.push('<text x="' + fm[0].toFixed(1) + '" y="' + (fm[1] - 8).toFixed(1) + '" text-anchor="middle" font-size="10" fill="#7FE3FF" font-family="Sarabun">FT-01</text>');
     ANCH.fm = P(385, 130, 60); ANCH.out = P(440, 130, 50);
     return '<svg class="st-svg" viewBox="' + VB.x + ' ' + VB.y + ' ' + VB.w + ' ' + VB.h + '" role="img" aria-label="สถานีสูบจ่ายน้ำ 3 มิติ แสดงสถานะปั๊มแบบเรียลไทม์">' + o.join('') + '</svg>';
   }

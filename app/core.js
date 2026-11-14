@@ -378,14 +378,14 @@
   window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredPrompt = e; $('#installBtn').hidden = false; if (!ls('installDismissed', false) && window.matchMedia('(max-width:720px)').matches) $('#installBar').hidden = false; });
 
   document.addEventListener('DOMContentLoaded', function () {
-    setTheme(ls('theme', 'dark'));
+    document.documentElement.setAttribute('data-theme', ls('theme', 'light'));
     buildNav();
     $('#loginForm').onsubmit = function (e) { e.preventDefault(); var u = $('#lgUser').value.trim().toLowerCase(); login(u); };
     $$('[data-demo]').forEach(function (b) { b.onclick = function () { login(null, b.getAttribute('data-demo')); }; });
     $('#logoutBtn').onclick = logout;
     var lb = $('#langBtn'); if (lb) lb.onclick = function () { if (window.I18N) I18N.set(I18N.lang() === 'en' ? 'th' : 'en'); };
     $$('[data-login-lang]').forEach(function (b) { b.onclick = function () { if (window.I18N) I18N.set(b.getAttribute('data-login-lang')); }; });
-    $('#themeBtn').onclick = function () { setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); };
+    $('#themeBtn').onclick = function () { if (APP.toggleTheme) APP.toggleTheme(); else setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); };
     $('#userBtn').onclick = function (e) { e.stopPropagation(); $('#userMenu').hidden = !$('#userMenu').hidden; };
     document.addEventListener('click', function (e) { if (!e.target.closest('#userMenu')) $('#userMenu').hidden = true; });
     var doInstall = function () { if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; } $('#installBar').hidden = true; };

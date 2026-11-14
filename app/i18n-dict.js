@@ -145,7 +145,7 @@ window.I18N_DICT = {
 
   // ---- settings
   'ภาษา / Language': 'Language', 'ภาษา': 'Language', 'เปลี่ยนภาษาทั้งระบบทันที รวมถึงแจ้งเตือนบนหน้าจอและรายงาน': 'Switches the whole system immediately, including on-screen alerts and reports', 'ธีม': 'Theme', 'มืด': 'Dark', 'สว่าง': 'Light',
-  'ธีมมืดเหมาะกับห้องควบคุม ธีมสว่างเหมาะกับการพิมพ์รายงาน': 'Dark suits control rooms; light suits printed reports', 'พื้นหลัง': 'Background', 'ตารางน้ำเงิน': 'Navy grid', 'ออโรร่า': 'Aurora', 'มหาสมุทร': 'Ocean', 'คาร์บอน': 'Carbon', 'เรียบ': 'Plain',
+  'ธีมมืดเหมาะกับห้องควบคุม ธีมสว่างเหมาะกับการพิมพ์รายงาน': 'Dark suits control rooms; light suits printed reports', 'พื้นหลัง': 'Background', 'ครีม': 'Cream', 'ขาวมุก': 'Pearl white', 'ขาวนวล': 'Soft white', 'เขียวถนอมสายตา': 'Eye-care sage', 'โทนสว่าง · สบายตา': 'Light · easy on the eyes', 'โทนมืด · ห้องควบคุม': 'Dark · control room', 'ตารางน้ำเงิน': 'Navy grid', 'ออโรร่า': 'Aurora', 'มหาสมุทร': 'Ocean', 'คาร์บอน': 'Carbon', 'เรียบ': 'Plain',
   'สีหลักของระบบ': 'Accent colour', 'สีสถานี 3 มิติ': '3D station colours', 'ดูสถานี 3D →': 'Open 3D station →', 'ปรับสีทีละส่วน': 'Adjust each part', 'พื้นสถานี': 'Station floor', 'เส้นตาราง': 'Grid lines', 'ท่อ': 'Pipes',
   'มอเตอร์ปั๊ม': 'Pump motors', 'ตัวเรือนปั๊ม': 'Pump casings', 'ตู้ควบคุม': 'Control panel', 'ถังน้ำ': 'Tanks', 'คืนค่าสีเริ่มต้น': 'Reset colours', 'เปลี่ยนสีสถานีแล้ว': 'Station colours changed',
 

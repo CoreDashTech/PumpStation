@@ -4,7 +4,7 @@
   --text:#E9EFFF;--muted:#9FB0DE;--faint:#6F80B3;
   --blue:#2F6BFF;--blue2:#5B8CFF;--cyan:#22C3EE;--green:#22C55E;--amber:#F5A524;--red:#EF4444;--violet:#8B5CF6;
   --pipe:#33456F;--shadow:0 18px 40px rgba(0,0,0,.35);
-  --r:16px;--font:'Sarabun','Space Grotesk',system-ui,sans-serif;--num:'Space Grotesk','Sarabun',system-ui,sans-serif;
+  --r:16px;--font:'Sarabun',system-ui,sans-serif;--num:'Sarabun',system-ui,sans-serif;
   color-scheme:dark;
 }
 [data-theme="light"]{
@@ -12,7 +12,7 @@
   --text:#0B1430;--muted:#55648A;--faint:#8592B4;--pipe:#C3CDE2;--shadow:0 12px 30px rgba(15,30,80,.08);color-scheme:light;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:17px;font-weight:500;line-height:1.55;-webkit-font-smoothing:antialiased}
 a{color:var(--blue2)}
 button,input,select,textarea{font:inherit;color:inherit}
 svg{display:block}
@@ -384,3 +384,91 @@ body.bg-plain .shell{background:var(--bg)}
   .preset-pick,.bg-pick{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:720px){.grid.keep2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.keep3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+
+/* ===== Classic light palettes (Appearance) — theme follows the background ===== */
+[data-theme="light"] body.bg-cream{--bg:#F7F2E7;--bg2:#EFE7D6;--panel:#FFFCF5;--panel2:#FAF5EA;--line:#E6DCC7;--line2:#D6C8AB;--text:#1E2A44;--muted:#5E5646;--faint:#8F8571;--pipe:#CDBF9F;--shadow:0 10px 28px rgba(92,72,32,.08)}
+[data-theme="light"] body.bg-pearl{--bg:#F2F1EE;--bg2:#E9E7E2;--panel:#FFFFFF;--panel2:#F8F7F4;--line:#E2DFD8;--line2:#CFCBC2;--text:#1D2433;--muted:#565C68;--faint:#8A8F99;--pipe:#C8C6C0;--shadow:0 10px 28px rgba(40,40,60,.08)}
+[data-theme="light"] body.bg-softwhite{--bg:#F5F7FA;--bg2:#EBEFF5;--panel:#FFFFFF;--panel2:#F7F9FC;--line:#E1E7F0;--line2:#CBD5E3;--text:#14213D;--muted:#4F5D78;--faint:#8592AA;--pipe:#C3CDE0;--shadow:0 10px 28px rgba(20,40,90,.07)}
+[data-theme="light"] body.bg-sage{--bg:#EEF3EC;--bg2:#E3EBE0;--panel:#FCFEFB;--panel2:#F4F8F2;--line:#D9E4D4;--line2:#C3D3BC;--text:#1E2D25;--muted:#55665A;--faint:#869488;--pipe:#BFCFB8;--shadow:0 10px 28px rgba(30,60,40,.08)}
+body.bg-cream .shell{background:radial-gradient(1100px 600px at 85% -10%,rgba(214,184,120,.18),transparent 60%),var(--bg);background-attachment:fixed}
+body.bg-pearl .shell{background:radial-gradient(900px 520px at 80% -10%,rgba(255,255,255,.95),transparent 60%),radial-gradient(800px 500px at 0% 100%,rgba(206,214,230,.35),transparent 60%),linear-gradient(135deg,#F4F3F0,#ECEAE5);background-attachment:fixed}
+body.bg-softwhite .shell{background:radial-gradient(1000px 560px at 85% -10%,rgba(47,107,255,.07),transparent 60%),var(--bg);background-attachment:fixed}
+body.bg-sage .shell{background:radial-gradient(1000px 560px at 85% -10%,rgba(120,170,120,.14),transparent 60%),var(--bg);background-attachment:fixed}
+body.bg-cream .login{background:radial-gradient(900px 600px at 20% 10%,rgba(214,184,120,.22),transparent 60%),var(--bg)}
+body.bg-pearl .login,body.bg-softwhite .login,body.bg-sage .login{background:radial-gradient(900px 600px at 20% 10%,rgba(47,107,255,.10),transparent 60%),var(--bg)}
+.bgsw-cream{background:radial-gradient(70px 40px at 80% 0,#EAD9B4,transparent),#F7F2E7}
+.bgsw-pearl{background:linear-gradient(135deg,#FFFFFF,#ECEAE5)}
+.bgsw-softwhite{background:linear-gradient(135deg,#FFFFFF,#EBEFF5)}
+.bgsw-sage{background:radial-gradient(70px 40px at 80% 0,#CFE0C8,transparent),#EEF3EC}
+.bg-group{font-size:15px;font-weight:700;color:var(--muted);margin:4px 0 10px}
+.bg-pick + .bg-group{margin-top:18px}
+[data-theme="light"] .eyebrow{color:#9A6B12}
+[data-theme="light"] .login-art{background-image:linear-gradient(rgba(60,80,140,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(60,80,140,.05) 1px,transparent 1px)}
+[data-theme="light"] .card{border-color:var(--line)}
+[data-theme="light"] .nav-a.on{background:color-mix(in srgb,var(--blue) 12%,var(--panel))}
+[data-theme="light"] .tabs button.on{box-shadow:0 1px 4px rgba(60,50,30,.12)}
+[data-theme="light"] .st-chip{box-shadow:0 6px 16px rgba(60,50,30,.12)}
+[data-theme="light"] .dot.ok{background:#16A34A}
+
+/* ===== Typography: Sarabun, larger & bolder ===== */
+body,button,input,select,textarea{font-family:'Sarabun',system-ui,sans-serif}
+.btn{font-size:16px;font-weight:700;min-height:44px}
+.btn.sm{font-size:15px;min-height:38px}
+.nav-a{font-size:17px;font-weight:600;min-height:46px}
+.side-nav .grp{font-size:13px;font-weight:800}
+.side-brand{font-size:19px}.side-brand small{font-size:13px}
+.top-title h1{font-size:24px;font-weight:800}
+.top-title .muted{font-size:14px;font-weight:600}
+.live-pill,.clock{font-size:15px;font-weight:600}
+.user-chip b{font-size:16px}.user-chip small{font-size:13px}
+.card-h h3{font-size:20px;font-weight:800}
+.card-h .muted{font-size:14px;font-weight:600}
+.kpi .lbl{font-size:15.5px;font-weight:700}
+.kpi .val{font-size:36px;font-weight:800;letter-spacing:0}
+.kpi .val small{font-size:15px;font-weight:600}
+.kpi .sub{font-size:14.5px;font-weight:600}
+label{font-size:15.5px;font-weight:600}
+input,select,textarea{font-size:17px;font-weight:600}
+.pill{font-size:14px;font-weight:800}
+table.tbl{font-size:16px}
+.tbl th{font-size:14.5px;font-weight:800}
+.tbl td{font-weight:600}
+.kv{font-size:16.5px}
+.kv > div:nth-child(even){font-weight:800}
+.feed-i{font-size:15.5px}.feed-i time{font-size:14px}
+.alm .t{font-weight:800;font-size:17px}.alm .m{font-size:14.5px}
+.tabs button{font-size:16px;font-weight:700}
+.chip{font-size:15.5px;font-weight:600}
+.legend{font-size:14px;font-weight:600}
+.chart svg text{font-size:13px;font-weight:600}
+.mimic .lbl{font-size:13.5px;font-weight:600}.mimic .val{font-size:16px;font-weight:800}
+.gauge text{font-weight:800}
+.toast b{font-size:16.5px}.toast small{font-size:14.5px}
+.modal-card h3{font-size:22px}
+.k-num{font-weight:800}
+.login-hero h1{font-weight:800}.login-hero p{font-size:19px}
+.login-card h2{font-size:32px;font-weight:800}
+.role-btn b{font-size:17px}.role-btn small{font-size:14.5px}
+.st-chip{font-size:14.5px}.st-chip b{font-size:16px;font-weight:800}.st-chip small{font-size:12.5px;font-weight:600}
+.code{font-size:13.5px}
+.empty{font-size:16px}
+.muted[style*="font-size:12.5px"],.muted[style*="font-size: 12.5px"]{font-size:14px !important}
+@media (max-width:720px){
+  html,body{font-size:16.5px}
+  .top-title h1{font-size:19px}
+  .kpi .val{font-size:28px}
+  .nav-a{font-size:16px}
+  .bottom a,.bottom button{font-size:12.5px;font-weight:700}
+}
+.kpi .spark{display:none}
+.shell{grid-template-columns:276px minmax(0,1fr)}
+@media (max-width:1024px){.shell{grid-template-columns:minmax(0,1fr)}}
+.tbl td.r,.tbl th.r{white-space:nowrap}
+.tbl td{white-space:normal}
+.tbl td.num{white-space:nowrap}
+[style*="font-size:12.5px"],[style*="font-size:12px"],[style*="font-size:13px"]{font-size:14.5px !important}
+[style*="font-size:13.5px"]{font-size:15px !important}
+.kv{font-size:17px}
+.side{background:var(--bg2)}
+@media (max-width:720px){#themeBtn{display:none}.top-title h1{font-size:18px}}
