@@ -40,6 +40,12 @@
       '<path d="' + d + '" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="' + Math.max(2, w / 3) + '" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -' + (w / 4).toFixed(1) + ')"/>' +
       (flowKey ? '<path class="st-flow" data-flow="' + flowKey + '" d="' + d + '" fill="none" style="stroke:var(--st-water)" stroke-width="' + Math.max(3, w / 2.6).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round"/>' : '');
   }
+  function valveG(key, x, y, z, label) {
+    var q = P(x, y, z);
+    return '<g class="st-valve" data-valve="' + key + '" tabindex="0" role="button" aria-label="' + label + '" transform="translate(' + q[0].toFixed(1) + ' ' + q[1].toFixed(1) + ') scale(1.35)">' +
+      '<circle r="15" fill="transparent"/><line x1="0" y1="-4" x2="0" y2="-15" stroke="#E2E8F0" stroke-width="2.4"/><ellipse cx="0" cy="-16" rx="7" ry="3" fill="none" stroke="#E2E8F0" stroke-width="2.2"/>' +
+      '<path class="vb" d="M-9 -7 L9 7 L9 -7 L-9 7 Z" stroke="#0B1430" stroke-width="1.2" stroke-linejoin="round"/><circle class="vd" r="3" fill="#fff"/></g>';
+  }
   function pct(p) { return [((p[0] - VB.x) / VB.w * 100).toFixed(2), ((p[1] - VB.y) / VB.h * 100).toFixed(2)]; }
 
   var ANCH = {};
@@ -65,7 +71,7 @@
     o.push('<g transform="matrix(' + C + ' ' + H + ' 0 1 ' + e.toFixed(2) + ' ' + f.toFixed(2) + ')">' +
       '<rect x="8" y="40" width="44" height="32" rx="2" fill="#071233"/><polyline id="stHmi" points="" fill="none" stroke="#3CF08C" stroke-width="1.3"/>' +
       '<text x="10" y="47" font-size="5" fill="#9FB0DE" font-family="Sarabun">PT bar</text>' +
-      '<circle id="stLedRun" cx="12" cy="84" r="3" fill="#22C55E"/><circle id="stLedPh" cx="21" cy="84" r="3" fill="#22C55E"/><circle cx="46" cy="84" r="4.5" fill="#E53935"/>' +
+      '<circle id="stLedRun" cx="12" cy="84" r="3" fill="#22C55E"/><circle id="stLedPh" cx="21" cy="84" r="3" fill="#22C55E"/><g id="stEstop" class="st-estop" role="button" tabindex="0" aria-label="Emergency Stop"><circle cx="46" cy="84" r="7" fill="#FFD43B"/><circle cx="46" cy="84" r="4.5" fill="#E53935"/></g>' +
       '<text x="8" y="18" font-size="6" fill="#4A5570" font-family="Sarabun">MCC · PLC FX5U</text><text x="8" y="28" font-size="5" fill="#6A7590" font-family="Sarabun">HMI 10″ · UPS</text></g>');
     var an = P(418, 20, 112), an2 = P(418, 20, 142);
     o.push('<line x1="' + an[0].toFixed(1) + '" y1="' + an[1].toFixed(1) + '" x2="' + an2[0].toFixed(1) + '" y2="' + an2[1].toFixed(1) + '" stroke="#9FB0DE" stroke-width="2.4"/>');
@@ -73,7 +79,8 @@
     ANCH.mcc = P(400, 21, 116);
     // suction header 14"
     o.push(pipe([[100, 70, 30], [150, 70, 30], [150, 210, 30]], 15, 'suction'));
-    o.push(pipe([[150, 210, 30], [150, 255, 30]], 11, null, true));
+    o.push(pipe([[150, 210, 30], [150, 255, 30]], 11, 'ph2', true));
+    o.push(valveG('ph2', 150, 236, 30, 'วาล์วสามทาง เฟส 2'));
     ANCH.future = P(150, 255, 34);
     // pumps
     [[1, 95], [2, 175]].forEach(function (pp) {
@@ -94,6 +101,7 @@
       o.push(pipe([[210, py + 13, 44], [210, py - 8, 44], [330, py - 8, 44]], 10, 'p' + id));
       var pt = P(300, py - 8, 44), pt2 = P(300, py - 8, 66);
       o.push('<line x1="' + pt[0].toFixed(1) + '" y1="' + pt[1].toFixed(1) + '" x2="' + pt2[0].toFixed(1) + '" y2="' + pt2[1].toFixed(1) + '" stroke="#9FB0DE" stroke-width="2"/><circle cx="' + pt2[0].toFixed(1) + '" cy="' + pt2[1].toFixed(1) + '" r="7" fill="#0F1D45" stroke="#22C3EE" stroke-width="2"/>');
+      o.push(valveG('sv' + id, 172, py + 12, 30, 'วาล์วดูด P-0' + id)); o.push(valveG('dv' + id, 318, py - 8, 44, 'วาล์วจ่าย P-0' + id));
       ANCH['p' + id] = P(258, py + 13, 44); ANCH['pt' + id] = P(300, py - 8, 70);
     });
     o.push(pipe([[330, 87, 44], [330, 167, 44]], 13, 'header'));
@@ -113,7 +121,7 @@
     var can = A.can('command');
     return '<div class="card flat st-pcard" data-pc="' + id + '"><div class="row" style="justify-content:space-between"><b class="k-num" style="font-size:17px">P-0' + id + '</b><span><span data-st="' + id + '" class="pill">–</span> <span data-role-pill="' + id + '" class="pill">–</span></span></div>' +
       '<div class="grid g3 keep3" style="gap:8px;margin:10px 0"><div><div class="muted" style="font-size:12px">ความถี่</div><b class="k-num"><span data-v="p' + id + '.freq"></span> Hz</b></div><div><div class="muted" style="font-size:12px">กระแส</div><b class="k-num"><span data-v="p' + id + '.current"></span> A</b></div><div><div class="muted" style="font-size:12px">กำลัง</div><b class="k-num"><span data-v="p' + id + '.power"></span> kW</b></div></div>' +
-      '<div class="bar" style="margin-bottom:12px"><i data-barw="p' + id + '.freq" data-max="50"></i></div>' +
+      '<div class="bar" style="margin-bottom:8px"><i data-barw="p' + id + '.freq" data-max="50"></i></div><div class="st-ilk" data-ilk="' + id + '" hidden></div>' +
       '<div class="row"><button class="btn success sm st-on" data-on="' + id + '"' + (can ? '' : ' disabled') + '>ON</button><button class="btn danger sm st-off" data-off="' + id + '"' + (can ? '' : ' disabled') + '>OFF</button><button class="btn sm" data-rst="' + id + '"' + (can ? '' : ' disabled') + '>Reset</button></div></div>';
   }
 
@@ -153,7 +161,7 @@
         '</div><div class="kv" style="margin-top:10px"><div>ปั๊มหลัก (Lead)</div><div data-v="lead"></div><div>สลับปั๊มในอีก</div><div data-v="altLeft"></div><div>อัปเดตล่าสุด</div><div data-v="ago"></div></div></div>' +
         '<div class="card"><div class="card-h"><h3>ควบคุม ON / OFF</h3>' + (A.can('command') ? '' : '<span class="muted">🔒 ดูอย่างเดียว</span>') + '</div><div class="stack" style="gap:10px">' + pumpCtl(1) + pumpCtl(2) + '</div>' +
         '<p class="muted st-note" style="font-size:12.5px;margin:10px 0 0"></p></div>' +
-        '</div></div>';
+        '</div></div>' + simPanel();
       applyStationVars($('#stScene', v));
       this.bind(v); applyCam(v); this.tick(v);
     },
@@ -171,18 +179,29 @@
         };
       });
       var drag = null;
-      stage.addEventListener('pointerdown', function (e) { if (e.target.closest('.st-pump,.st-pop,button,a')) return; drag = { x: e.clientX, y: e.clientY, rx: cam.rx, ry: cam.ry }; cam.auto = false; stage.setPointerCapture(e.pointerId); stage.classList.add('dragging'); });
+      stage.addEventListener('pointerdown', function (e) { if (e.target.closest('.st-pump,.st-pop,.st-valve,.st-estop,button,a')) return; drag = { x: e.clientX, y: e.clientY, rx: cam.rx, ry: cam.ry }; cam.auto = false; stage.setPointerCapture(e.pointerId); stage.classList.add('dragging'); });
       stage.addEventListener('pointermove', function (e) { if (!drag) return; cam.ry = Math.max(-28, Math.min(28, drag.ry + (e.clientX - drag.x) / 8)); cam.rx = Math.max(0, Math.min(24, drag.rx - (e.clientY - drag.y) / 10)); applyCam(v); });
       var end = function () { drag = null; stage.classList.remove('dragging'); };
       stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
       stage.addEventListener('wheel', function (e) { if (!e.ctrlKey) return; e.preventDefault(); cam.z = Math.max(0.7, Math.min(1.6, cam.z - e.deltaY / 600)); applyCam(v); }, { passive: false });
+      var DN = { sv1: 'วาล์วดูด P-01', dv1: 'วาล์วจ่าย P-01', sv2: 'วาล์วดูด P-02', dv2: 'วาล์วจ่าย P-02', ph2: 'วาล์วสามทาง เฟส 2', estop: 'Emergency Stop' };
+      var toggleDev = function (k, val) {
+        if (S.src !== 'sim') { A.toast('ใช้ได้เฉพาะโหมดจำลอง', 'ในโหมดทำงานจริง วาล์วและอุปกรณ์สั่งที่หน้างาน', 'warning'); return; }
+        SIM.setDevice(k, val); A.audit('โหมดจำลอง', (DN[k] || k) + ' → ' + (val ? 'ON' : 'OFF')); self.tick(v);
+      };
+      $$('[data-dev]', v).forEach(function (i) { i.onchange = function () { toggleDev(i.getAttribute('data-dev'), i.checked); }; });
+      $$('.st-valve', v).forEach(function (g) { var f = function () { var k = g.getAttribute('data-valve'); toggleDev(k, !devVal(k)); A.toast((devVal(k) ? 'เปิด ' : 'ปิด ') + DN[k], 'โหมดจำลอง', 'info'); }; g.addEventListener('click', f); g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f(); } }); });
+      var es = $('#stEstop', v); if (es) es.addEventListener('click', function () { toggleDev('estop', !S.dev.estop); });
+      var dm = $('#dmR', v); if (dm) { dm.value = S.demandMul; dm.oninput = function () { SIM.setDevice('demand', +dm.value); self.tick(v); }; }
+      $$('[data-dm]', v).forEach(function (b) { b.onclick = function () { SIM.setDevice('demand', +b.getAttribute('data-dm')); if (dm) dm.value = b.getAttribute('data-dm'); A.audit('โหมดจำลอง', 'ระดับการใช้น้ำ ' + Math.round(b.getAttribute('data-dm') * 100) + '%'); self.tick(v); }; });
+      var sr = $('#simReset', v); if (sr) sr.onclick = function () { SIM.inject('clear'); if (dm) dm.value = 1; A.toast('คืนค่าอุปกรณ์แล้ว', 'ทุกอุปกรณ์กลับสู่สภาพปกติ', 'ok'); self.tick(v); };
       $$('.st-pump', v).forEach(function (g) {
         var open = function () { self.sel = +g.getAttribute('data-pump'); self.pop(v); };
         g.addEventListener('click', open); g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
       });
       $('.st-layout', v).addEventListener('click', function (e) {
         var on = e.target.closest('[data-on]'), off = e.target.closest('[data-off]'), rs = e.target.closest('[data-rst]'), cl = e.target.closest('[data-popclose]');
-        if (cl) { self.sel = null; $('#stPop', v).hidden = true; return; }
+        if (cl) { self.sel = null; $('#stPop', v).hidden = true; $$('[data-sel]', v).forEach(function (q) { q.setAttribute('opacity', '0'); }); return; }
         if (on) self.cmd(v, +on.getAttribute('data-on'), 'on');
         if (off) self.cmd(v, +off.getAttribute('data-off'), 'off');
         if (rs) self.cmd(v, +rs.getAttribute('data-rst'), 'reset');
@@ -212,17 +231,24 @@
     },
     tick: function (v) {
       var root = $('#stScene', v); if (!root) return;
-      var dur = Math.max(0.35, Math.min(3, 140 / Math.max(10, S.flow))) + 's', any = false;
+      var dur = Math.max(0.35, Math.min(3, 140 / Math.max(10, S.flow))) + 's', any = false, off = A.offline();
       S.pumps.forEach(function (p) {
-        var run = p.run && p.freq > 1; any = any || run;
+        var run = !off && p.run && p.freq > 1; any = any || run;
         $$('[data-flow="p' + p.id + '"]', root).forEach(function (e) { e.classList.toggle('on', run); e.style.animationDuration = dur; });
         var fan = $('[data-fan="' + p.id + '"]', root); fan.style.animationDuration = (0.5 * 50 / Math.max(10, p.freq)).toFixed(2) + 's'; fan.style.animationPlayState = run ? 'running' : 'paused';
-        var lt = $('[data-light="' + p.id + '"]', root); lt.style.color = p.fault ? '#FF4D4D' : run ? '#3CF08C' : '#94A3B8'; lt.classList.toggle('blinking', !!p.fault); lt.classList.toggle('glow', run);
+        var lt = $('[data-light="' + p.id + '"]', root); lt.style.color = p.fault ? '#FF4D4D' : run ? '#3CF08C' : (!off && !p.ready) ? '#F5A524' : '#94A3B8';
+        var il = $('[data-ilk="' + p.id + '"]', v); if (il) { var why = off ? [] : SIM.whyNot(p); il.hidden = !why.length; il.textContent = why.length ? '⚠ ไม่พร้อม: ' + why.join(', ') : ''; } lt.classList.toggle('blinking', !!p.fault); lt.classList.toggle('glow', run);
         $('[data-tint="' + p.id + '"]', root).setAttribute('opacity', p.fault ? '.55' : '0');
         var tag = $('[data-tag="' + p.id + '"]', root), st = A.statusOf(p); tag.textContent = st.t; tag.className = 'st-tag ' + st.cls;
         $$('[data-pc="' + p.id + '"]', v).forEach(function (c) { c.classList.toggle('is-run', run); c.classList.toggle('is-fault', !!p.fault); });
       });
       $$('[data-flow="suction"],[data-flow="header"]', root).forEach(function (e) { e.classList.toggle('on', any); e.style.animationDuration = dur; });
+      $$('[data-flow="ph2"]', root).forEach(function (e) { e.classList.toggle('on', any && S.dev.ph2); });
+      $$('.st-valve', root).forEach(function (g) { var k = g.getAttribute('data-valve'), o = devVal(k); g.querySelector('.vb').setAttribute('fill', o ? '#22C55E' : '#EF4444'); g.classList.toggle('closed', !o); g.classList.toggle('locked', S.src !== 'sim'); });
+      var es = $('#stEstop', root); if (es) es.classList.toggle('pressed', !!S.dev.estop);
+      $$('[data-dev]', v).forEach(function (i) { var val = devVal(i.getAttribute('data-dev')); if (i.checked !== val) i.checked = val; i.closest('.simsw').classList.toggle('is-off', i.getAttribute('data-dev') === 'estop' ? val : !val); });
+      var dv = $('#dmVal', v); if (dv) dv.textContent = Math.round(S.demandMul * 100) + '%';
+      var ct = $('#cabT', v); if (ct) ct.textContent = S.cabTemp.toFixed(1);
       var hmi = $('#stHmi', root), tr = S.trend.slice(-40);
       if (hmi && tr.length) hmi.setAttribute('points', tr.map(function (d, i) { return (10 + i * 40 / 39).toFixed(1) + ',' + (70 - Math.max(0, Math.min(1, d.p / 6)) * 24).toFixed(1); }).join(' '));
       var lr = $('#stLedRun', root); if (lr) lr.setAttribute('fill', any ? '#22C55E' : '#64748B');
@@ -235,6 +261,20 @@
     resize: function () { }
   };
 
+  function sw(k, label, sub) { return '<label class="simsw"><span><b>' + label + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</span><span class="switch"><input type="checkbox" data-dev="' + k + '"><span class="tr"></span></span></label>'; }
+  function simPanel() {
+    if (S.src !== 'sim') return '<div class="card" style="margin-top:16px"><div class="card-h"><h3>แผงจำลองอุปกรณ์</h3></div><div class="lock">ปิดอยู่ในโหมดทำงานจริง — เปลี่ยนเป็น "โหมดจำลอง" ที่แถบด้านบนเพื่อทดลองสั่งอุปกรณ์</div></div>';
+    return '<div class="card simpanel" id="simPanel" style="margin-top:16px"><div class="card-h"><h3>🧪 แผงจำลองอุปกรณ์</h3><span class="muted">สั่งเปิด/ปิดได้ทุกอุปกรณ์ ระบบตอบสนองตามลอจิก PLC จริง · คลิกวาล์วหรือปุ่ม E-Stop บนภาพ 3D ได้ด้วย</span></div>' +
+      '<div class="simgrid">' +
+      '<div class="simgrp"><h4>ความต้องการใช้น้ำ</h4><div class="row" style="justify-content:space-between"><span class="muted">ระดับการใช้น้ำ</span><b class="k-num" id="dmVal"></b></div><input type="range" id="dmR" min="0.3" max="1.8" step="0.05" style="width:100%;accent-color:var(--blue)" aria-label="ระดับการใช้น้ำ">' +
+      '<div class="row" style="gap:6px;margin-top:8px"><button class="btn sm" data-dm="0.4">กลางคืน</button><button class="btn sm" data-dm="1">ปกติ</button><button class="btn sm" data-dm="1.6">ช่วงพีค</button></div>' +
+      '<div class="kv" style="margin-top:10px"><div>ความต้องการตอนนี้</div><div><span data-v="demand"></span> m³/h</div></div></div>' +
+      '<div class="simgrp"><h4>วาล์ว</h4>' + sw('sv1', 'วาล์วดูด P-01', 'Gate valve 10″') + sw('dv1', 'วาล์วจ่าย P-01', 'Gate valve 8″') + sw('sv2', 'วาล์วดูด P-02', 'Gate valve 10″') + sw('dv2', 'วาล์วจ่าย P-02', 'Gate valve 8″') + sw('ph2', 'วาล์วสามทาง เฟส 2', 'Gate valve 14″ · เพิ่มการจ่าย 60 m³/h') + '</div>' +
+      '<div class="simgrp"><h4>ไฟฟ้า & ความปลอดภัย</h4>' + sw('phase', 'ไฟฟ้า 3 เฟส', 'Phase Protection') + sw('mccb1', 'MCCB P-01', 'Sub Breaker 100A') + sw('mccb2', 'MCCB P-02', 'Sub Breaker 100A') + sw('estop', 'Emergency Stop', 'กด = หยุดทุกปั๊มทันที') + sw('fan', 'พัดลมระบายอากาศตู้', 'อุณหภูมิตู้ <b class="k-num" id="cabT"></b> °C') + '</div>' +
+      '<div class="simgrp"><h4>การสื่อสาร</h4>' + sw('plc', 'PLC FX5U', '192.168.10.10') + sw('inv1', 'INV-01 · FMBT-21', 'Modbus TCP') + sw('inv2', 'INV-02 · FMBT-21', 'Modbus TCP') + sw('pm', 'Power Meter M1M 20', 'Modbus TCP') + sw('fm', 'Flowmeter FT-01', 'RS485 → TCP') + '</div>' +
+      '</div><div class="row" style="justify-content:space-between;margin-top:14px"><span class="muted">ลองปิดวาล์วดูดของปั๊มหลัก แล้วดูปั๊มอีกตัวรับงานแทนอัตโนมัติ</span><button class="btn sm success" id="simReset">✓ คืนค่าอุปกรณ์ทั้งหมด</button></div></div>';
+  }
+  function devVal(k) { if (k === 'phase') return S.phaseOK; if (k in S.comm) return S.comm[k] !== false; return !!S.dev[k]; }
   function tile(lbl, key, unit, color) { return '<div class="card flat kpi" style="--accent:' + color + ';padding:12px 12px 10px"><div class="lbl">' + lbl + '</div><div class="val" style="font-size:24px"><span data-v="' + key + '"></span><small>' + unit + '</small></div></div>'; }
 
   window.STATION = { PRESETS: PRESETS, KEYS: KEYS, KEY_LABEL: KEY_LABEL, colors: stationColors, apply: applyStationVars };

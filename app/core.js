@@ -115,7 +115,10 @@
     if (k === 'role') return S.lead === p.id ? 'Lead' : 'Lag';
     return '–';
   }
+  function offline() { return S.src === 'live' && !(window.LIVE && LIVE.connected()); }
+  var KEEP = { clock: 1, alarmCount: 1, mode: 1, sp: 1 };
   function val(key) {
+    if (offline() && !KEEP[key]) return '—';
     var c = S.cfg;
     if (key.indexOf('p1.') === 0 || key.indexOf('p2.') === 0) return pumpVal(S.pumps[key[1] - 1], key.slice(3));
     switch (key) {
@@ -149,6 +152,8 @@
     return '';
   }
   function statusOf(p) {
+    if (offline()) return { cls: 'stop', t: '—' };
+    if (!p.fault && !p.ready && !p.run) return { cls: 'warn', t: 'NOT READY' };
     if (p.fault) return { cls: 'fault', t: 'FAULT' };
     if (p.run) return { cls: 'run', t: 'RUN' };
     if (p.ready) return { cls: 'stop', t: 'READY' };
@@ -175,9 +180,49 @@
       var k = el.getAttribute('data-barw'), mx = +el.getAttribute('data-max');
       var raw = parseFloat(val(k).replace(/,/g, '')); el.style.width = Math.max(0, Math.min(100, raw / mx * 100)) + '%';
     });
+    var lp = $('#livePill');
+    if (lp) { var st = S.src === 'sim' ? ['warn', 'โหมดจำลอง'] : offline() ? ['bad', 'ไม่ได้เชื่อมต่อ'] : ['ok', 'PLC ออนไลน์']; var d = lp.querySelector('.dot'); d.className = 'dot pulse ' + st[0]; var t = lp.querySelector('.lp-t'); if (t.getAttribute('data-k') !== st[1]) { t.setAttribute('data-k', st[1]); t.textContent = st[1]; } }
+    drawModebar();
     var b = $('.bell .badge'); if (b) b.hidden = S.alarms.length === 0;
     $$('.nav-a[data-r="alarms"] .cnt, .bottom [data-r="alarms"] .cnt').forEach(function (el) { el.textContent = S.alarms.length; el.hidden = !S.alarms.length; });
   }
+
+  // ---------- mode bar (Simulation / Live)
+  var mbState = '';
+  function drawModebar() {
+    var mb = $('#modebar'); if (!mb) return;
+    var sim = S.src === 'sim', conn = !sim && window.LIVE && LIVE.connected(), key = S.src + (conn ? 1 : 0) + (window.LIVE ? LIVE.cfg().url : '');
+    if (key === mbState) return; mbState = key;
+    mb.className = 'modebar ' + (sim ? 'is-sim' : conn ? 'is-live' : 'is-off');
+    var right = sim
+      ? '<span class="mb-msg"><b>โหมดจำลอง</b> · ข้อมูลจากตัวจำลอง สั่งเปิด/ปิดปั๊ม วาล์ว และอุปกรณ์ทุกตัวได้ ระบบตอบสนองเหมือนจริง</span><a class="btn sm" href="#/station">🧪 แผงจำลองอุปกรณ์</a>'
+      : conn ? '<span class="mb-msg"><b>ทำงานจริง</b> · เชื่อมต่อ Edge Gateway ' + esc(LIVE.cfg().url) + ' แล้ว คำสั่งจะส่งไปยัง PLC จริง</span><button class="btn sm" data-livecfg>ตั้งค่าการเชื่อมต่อ</button>'
+        : '<span class="mb-msg"><b>ทำงานจริง</b> · ' + (LIVE && LIVE.cfg().url ? 'เชื่อมต่อ Edge Gateway ไม่ได้' : 'ยังไม่ได้ตั้งค่า Edge Gateway') + ' — ค่าจะแสดงเมื่อเชื่อมต่ออุปกรณ์จริง สั่งงานไม่ได้</span><button class="btn sm primary" data-livecfg>ตั้งค่าการเชื่อมต่อ</button>';
+    mb.innerHTML = '<div class="tabs mb-tabs" role="group" aria-label="แหล่งข้อมูล"><button data-src="sim" class="' + (sim ? 'on' : '') + '" aria-pressed="' + sim + '">🧪 โหมดจำลอง</button><button data-src="live" class="' + (!sim ? 'on' : '') + '" aria-pressed="' + !sim + '">⚡ ทำงานจริง</button></div>' + right;
+  }
+  function liveCfgModal() {
+    var c = LIVE.cfg();
+    modal('<h3>เชื่อมต่อ Edge Gateway</h3><p class="muted" style="margin-top:0">ใส่ที่อยู่ของ CoreDash Edge Gateway ที่ติดตั้งในตู้ควบคุม และ API Key ที่ได้จากผู้ดูแลระบบ</p><div class="stack" style="gap:12px"><label>ที่อยู่ Gateway (URL)<input id="lcU" placeholder="https://192.168.10.5" value="' + esc(c.url) + '"></label><label>API Key<input id="lcK" placeholder="cdps_live_..." value="' + esc(c.key) + '"></label><div id="lcR" class="muted"></div></div><div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn ghost" data-close>ยกเลิก</button><button class="btn" id="lcT">ทดสอบการเชื่อมต่อ</button><button class="btn primary" id="lcS">บันทึก</button></div>',
+      function (el, close) {
+        $('#lcT', el).onclick = function () {
+          var r = $('#lcR', el); r.textContent = 'กำลังทดสอบ…';
+          LIVE.test({ url: $('#lcU', el).value, key: $('#lcK', el).value }).then(function (j) { r.innerHTML = '<span style="color:var(--green);font-weight:800">✓ เชื่อมต่อสำเร็จ</span> · อัปเดตล่าสุด ' + esc(j.last_update || ''); })
+            .catch(function (e) { r.innerHTML = '<span style="color:var(--red);font-weight:800">✕ เชื่อมต่อไม่ได้</span> · ' + esc(e.message || e); });
+        };
+        $('#lcS', el).onclick = function () { LIVE.setCfg({ url: $('#lcU', el).value, key: $('#lcK', el).value }); audit('ตั้งค่า', 'เชื่อมต่อ Edge Gateway ' + $('#lcU', el).value); mbState = ''; close(); toast('บันทึกแล้ว', 'การเชื่อมต่อ Edge Gateway', 'ok'); };
+      });
+  }
+  function setSource(src) {
+    if (src === S.src) return;
+    SIM.setSource(src); audit('ตั้งค่า', src === 'sim' ? 'เปลี่ยนเป็นโหมดจำลอง' : 'เปลี่ยนเป็นโหมดทำงานจริง');
+    toast(src === 'sim' ? 'เปลี่ยนเป็นโหมดจำลอง' : 'เปลี่ยนเป็นโหมดทำงานจริง', src === 'sim' ? 'ทดลองสั่งอุปกรณ์ได้ทุกตัว ไม่กระทบระบบจริง' : 'อ่านค่าและสั่งงานผ่าน Edge Gateway', 'info');
+    if (src === 'live' && window.LIVE) LIVE.poll();
+    mbState = ''; route();
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-src]'); if (b && b.closest('#modebar')) setSource(b.getAttribute('data-src'));
+    if (e.target.closest('[data-livecfg]')) liveCfgModal();
+  });
 
   // ---------- gauge (240° arc)
   function gauge(key, min, max, unit, label, bands) {
@@ -398,7 +443,7 @@
 
   g.APP = {
     $: $, $$: $$, esc: esc, fmt: fmt, tFmt: tFmt, dFmt: dFmt, dtFmt: dtFmt, dur: dur, ic: ic, pad: pad,
-    PAGES: PAGES, isEn: isEn, EN_M: EN_M, ROLES: ROLES, PERM: PERM, PERM_LABEL: PERM_LABEL, can: can, audit: audit, session: function () { return session; },
+    PAGES: PAGES, isEn: isEn, offline: offline, liveCfgModal: function () { liveCfgModal(); }, EN_M: EN_M, ROLES: ROLES, PERM: PERM, PERM_LABEL: PERM_LABEL, can: can, audit: audit, session: function () { return session; },
     users: function () { return users; }, setUsers: function (u) { users = u; saveUsers(); }, auditLog: function () { return auditLog; },
     setTheme: setTheme, route: function () { route(); }, buildNav: function () { buildNav(); }, toast: toast, modal: modal, confirmBox: confirmBox, csv: csv, val: val, bindLive: bindLive, gauge: gauge, lineChart: lineChart, barChart: barChart, spark: spark, statusOf: statusOf, ls: ls, lsSet: lsSet
   };

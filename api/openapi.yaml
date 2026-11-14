@@ -143,6 +143,24 @@ paths:
                   source: { type: string, example: PLC FX5U-32MR/DS }
                   meta: { $ref: '#/components/schemas/Meta' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/control:
+    post:
+      tags: [Status]
+      summary: สั่งงานจาก SCADA (ใช้โดยหน้าจอโหมดทำงานจริง)
+      description: "scope: control · ต้องเป็นผู้ใช้ระดับผู้ปฏิบัติงานขึ้นไป ทุกคำสั่งบันทึกใน Log การทำงานของผู้ใช้"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                command: { type: string, enum: [start, stop, reset, alternate, config] }
+                args: { type: object, example: { pump: 1 } }
+      responses:
+        '202': { description: รับคำสั่งแล้ว ส่งต่อไปยัง PLC }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 components:
   securitySchemes:
     ApiKeyAuth: { type: apiKey, in: header, name: X-API-Key }

@@ -472,3 +472,36 @@ table.tbl{font-size:16px}
 .kv{font-size:17px}
 .side{background:var(--bg2)}
 @media (max-width:720px){#themeBtn{display:none}.top-title h1{font-size:18px}}
+
+/* ===== mode bar: simulation / live ===== */
+.shell{grid-template-rows:auto auto 1fr}
+.side{grid-row:1/4}
+.modebar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 24px;border-bottom:1px solid var(--line);font-size:15.5px}
+.modebar .mb-msg{flex:1 1 320px;min-width:0}
+.modebar.is-sim{background:color-mix(in srgb,#F5A524 14%,var(--panel));box-shadow:inset 4px 0 0 #E89B12}
+.modebar.is-live{background:color-mix(in srgb,#22C55E 13%,var(--panel));box-shadow:inset 4px 0 0 #16A34A}
+.modebar.is-off{background:color-mix(in srgb,#EF4444 11%,var(--panel));box-shadow:inset 4px 0 0 #DC2626}
+.mb-tabs{background:var(--panel)}
+.mb-tabs button{font-size:16px;font-weight:800;padding:8px 16px}
+.modebar.is-sim .mb-tabs button.on{background:#E89B12;color:#fff}
+.modebar.is-live .mb-tabs button.on,.modebar.is-off .mb-tabs button.on{background:#16A34A;color:#fff}
+.modebar.is-off .mb-tabs button.on{background:#DC2626}
+@media (max-width:720px){.modebar{padding:10px 12px;gap:8px}.modebar .mb-msg{font-size:14.5px;flex-basis:100%;order:3}.mb-tabs{flex:1}.mb-tabs button{flex:1;padding:8px 6px;font-size:15px}}
+.st-valve{cursor:pointer;outline:none}
+.st-valve:hover .vb,.st-valve:focus-visible .vb{filter:brightness(1.25) drop-shadow(0 0 4px #fff)}
+.st-valve.closed .vd{fill:#FFE4E4}
+.st-valve.locked{cursor:not-allowed}
+.st-estop{cursor:pointer}
+.st-estop.pressed circle:last-child{fill:#7F1D1D}
+.st-estop.pressed{animation:pulse .7s steps(2) infinite}
+.st-ilk{font-size:14.5px;font-weight:700;color:#B45309;background:color-mix(in srgb,#F5A524 15%,transparent);border-radius:8px;padding:6px 10px;margin-bottom:10px}
+.simgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.simgrp{padding:14px;border-radius:14px;background:var(--panel2);border:1px solid var(--line)}
+.simgrp h4{margin:0 0 10px;font-size:17px;font-weight:800}
+.simsw{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);color:var(--text);cursor:pointer}
+.simsw:last-child{border-bottom:0}
+.simsw b{display:block;font-size:16px}.simsw small{display:block;color:var(--muted);font-size:13.5px;font-weight:600}
+.simsw.is-off b{color:#DC2626}
+.simsw input[data-dev="estop"]:checked + .tr{background:#DC2626}
+@media (max-width:1200px){.simgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:720px){.simgrid{grid-template-columns:minmax(0,1fr)}}

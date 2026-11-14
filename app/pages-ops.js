@@ -115,7 +115,7 @@
     ring.setAttribute('stroke-dasharray', (264 * frac).toFixed(1) + ' 264');
     $('#lagBar', root).style.width = Math.min(100, S.lagTimer / S.cfg.intervalStart * 100) + '%';
     $('#stopBar', root).style.width = Math.min(100, S.stopTimer / S.cfg.intervalStop * 100) + '%';
-    $('#pidOut', root).textContent = fmt(S.pumps[S.lead - 1].pidOut, 1);
+    $('#pidOut', root).textContent = A.offline() ? '—' : fmt(S.pumps[S.lead - 1].pidOut, 1);
   }
 
   function alarmMini() {
@@ -171,7 +171,7 @@
         '<div class="card"><div class="card-h"><h3>แนวโน้มสด 15 นาที</h3><div class="legend"><span><i style="background:#5B8CFF"></i>แรงดัน (bar)</span><span><i style="background:#F5A524"></i>Setpoint</span><span><i style="background:#22C3EE"></i>อัตราการไหล (m³/h)</span></div></div><div id="liveChart"></div></div>' +
         '<div class="card"><div class="card-h"><h3>บันทึกเหตุการณ์</h3><span class="muted">ล่าสุด</span></div><div class="feed" id="feed">' + feedHTML() + '</div></div>' +
         '</div>' +
-        (A.can('demo') ? '<div class="card no-print" style="margin-top:16px"><div class="card-h"><h3>โหมดนำเสนอ · จำลองเหตุการณ์</h3><span class="muted">ใช้สาธิตการทำงานของลอจิกและการแจ้งเตือน (เฉพาะโหมดสาธิต)</span></div><div class="row">' +
+        (A.can('demo') && S.src === 'sim' ? '<div class="card no-print" style="margin-top:16px"><div class="card-h"><h3>โหมดนำเสนอ · จำลองเหตุการณ์</h3><span class="muted">ใช้สาธิตการทำงานของลอจิกและการแจ้งเตือน (เฉพาะโหมดสาธิต)</span></div><div class="row">' +
           '<button class="btn sm" data-inj="peak">💧 ความต้องการน้ำสูง (ดู Lag Start)</button>' +
           '<button class="btn sm" data-inj="fault1">⚠️ P-01 Fault 2310</button><button class="btn sm" data-inj="fault2">⚠️ P-02 Fault 4310</button>' +
           '<button class="btn sm" data-inj="phase">⚡ ไฟขาดเฟส 25 วิ</button><button class="btn sm" data-inj="comm">📡 Flowmeter ขาดการสื่อสาร</button>' +

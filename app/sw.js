@@ -1,6 +1,6 @@
 /* CoreDash PumpStation service worker — offline app shell */
-var CACHE = 'cdps-v3';
-var SHELL = ['./', 'index.html', 'app.css', 'sim.js', 'core.js', 'pages-ops.js', 'pages-data.js', 'pages-admin.js', 'station3d.js', 'settings.js', 'i18n-dict.js', 'i18n.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
+var CACHE = 'cdps-v4';
+var SHELL = ['./', 'index.html', 'app.css', 'sim.js', 'core.js', 'pages-ops.js', 'pages-data.js', 'pages-admin.js', 'station3d.js', 'settings.js', 'i18n-dict.js', 'i18n.js', 'live.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); })); });
 self.addEventListener('activate', function (e) { e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); })); }).then(function () { return self.clients.claim(); })); });
 self.addEventListener('fetch', function (e) {

@@ -89,6 +89,9 @@
     flowTotal: 1843250.4, kwhTotal: 1258430.7,
     pm: { v: [400, 400, 400], a: [0, 0, 0], hz: [50, 50, 50], kw: 0, pf: 0.95 },
     phaseOK: true,
+    src: lsGet('src', 'sim'),
+    dev: lsGet('dev', null) || { sv1: true, dv1: true, sv2: true, dv2: true, ph2: false, mccb1: true, mccb2: true, estop: false, fan: true },
+    cabTemp: 34, demandMul: lsGet('demandMul', 1),
     comm: { plc: true, hmi: true, inv1: true, inv2: true, pm: true, fm: true, sw: true, ups: true, gw: true },
     lagTimer: 0, stopTimer: 0, lastUpdate: Date.now(),
     trend: [], events: [],
@@ -105,6 +108,13 @@
     S.today.m3 = m3; S.today.kwh = kwh;
   })();
 
+  function avail(p) { var d = S.dev, i = p.id; return !p.fault && S.phaseOK && !d.estop && d['mccb' + i] && d['sv' + i] && d['dv' + i]; }
+  function whyNot(p) {
+    var d = S.dev, i = p.id, r = [];
+    if (p.fault) r.push('Fault ' + p.fault); if (!S.phaseOK) r.push('ไฟขาดเฟส'); if (d.estop) r.push('กด Emergency Stop');
+    if (!d['mccb' + i]) r.push('MCCB ปลด'); if (!d['sv' + i]) r.push('วาล์วดูดปิด'); if (!d['dv' + i]) r.push('วาล์วจ่ายปิด');
+    return r;
+  }
   var listeners = [];
   function emit(type, data) { for (var i = 0; i < listeners.length; i++) try { listeners[i](type, data); } catch (e) { console.error(e); } }
 
@@ -117,6 +127,13 @@
     { code: 'P2_FAULT', sev: 'critical', delay: 0, text: function () { var p = S.pumps[1]; return 'P-02 Inverter Fault ' + p.fault + ' ' + (FAULTS[p.fault] || ''); }, tag: 'INV-02', test: function () { return !!S.pumps[1].fault; } },
     { code: 'P1_CURR', sev: 'warning', delay: 15, text: function () { return 'P-01 กระแสมอเตอร์สูง (' + S.pumps[0].current.toFixed(1) + ' A)'; }, tag: 'INV-01', test: function () { return S.pumps[0].current > RATED_A * 0.97; } },
     { code: 'P2_CURR', sev: 'warning', delay: 15, text: function () { return 'P-02 กระแสมอเตอร์สูง (' + S.pumps[1].current.toFixed(1) + ' A)'; }, tag: 'INV-02', test: function () { return S.pumps[1].current > RATED_A * 0.97; } },
+    { code: 'ESTOP', sev: 'critical', delay: 0, text: function () { return 'กด Emergency Stop — หยุดปั๊มทั้งหมด'; }, tag: 'MCC', test: function () { return S.dev.estop; } },
+    { code: 'P1_ILK', sev: 'warning', delay: 2, text: function () { return 'P-01 ไม่พร้อมทำงาน: ' + whyNot(S.pumps[0]).join(', '); }, tag: 'P-01', test: function () { var p = S.pumps[0]; return !p.fault && S.phaseOK && !S.dev.estop && !avail(p); } },
+    { code: 'P2_ILK', sev: 'warning', delay: 2, text: function () { return 'P-02 ไม่พร้อมทำงาน: ' + whyNot(S.pumps[1]).join(', '); }, tag: 'P-02', test: function () { var p = S.pumps[1]; return !p.fault && S.phaseOK && !S.dev.estop && !avail(p); } },
+    { code: 'CAB_TEMP', sev: 'warning', delay: 5, text: function () { return 'อุณหภูมิตู้ควบคุมสูง (' + S.cabTemp.toFixed(1) + ' °C)'; }, tag: 'MCC', test: function () { return S.cabTemp > 45; } },
+    { code: 'NO_PUMP', sev: 'critical', delay: 8, text: function () { return 'ไม่มีปั๊มพร้อมทำงาน — หยุดจ่ายน้ำ'; }, tag: 'SYSTEM', test: function () { return S.cfg.mode === 'AUTO' && !avail(S.pumps[0]) && !avail(S.pumps[1]); } },
+    { code: 'COMM_INV1', sev: 'major', delay: 10, text: function () { return 'ขาดการสื่อสาร INV-01 (FMBT-21)'; }, tag: 'INV-01', test: function () { return S.comm.inv1 === false; } },
+    { code: 'COMM_INV2', sev: 'major', delay: 10, text: function () { return 'ขาดการสื่อสาร INV-02 (FMBT-21)'; }, tag: 'INV-02', test: function () { return S.comm.inv2 === false; } },
     { code: 'PHASE', sev: 'critical', delay: 0, text: function () { return 'Phase Protection ทำงาน — ไฟฟ้าขาดเฟส/กลับเฟส'; }, tag: 'MCC', test: function () { return !S.phaseOK; } },
     { code: 'COMM_FM', sev: 'major', delay: 10, text: function () { return 'ขาดการสื่อสาร Flowmeter (RS485→TCP)'; }, tag: 'FT-01', test: function () { return !S.comm.fm; } },
     { code: 'COMM_PM', sev: 'major', delay: 10, text: function () { return 'ขาดการสื่อสาร Power Meter M1M 20'; }, tag: 'PM-01', test: function () { return !S.comm.pm; } },
@@ -190,17 +207,19 @@
     if (c.mode === 'AUTO' && S.now - S.altStart >= c.altHours * 3600e3) alternate('ครบรอบ ' + c.altHours + ' ชม.');
 
     // failover: lead faulted → lag becomes lead
-    if (lead.fault && !lag.fault && c.mode === 'AUTO') { alternate('Failover: ' + lead.tag + ' Fault'); lead = S.pumps[S.lead - 1]; lag = S.pumps[2 - S.lead]; }
+    if (!avail(lead) && avail(lag) && c.mode === 'AUTO') { alternate('Failover: ' + lead.tag + (lead.fault ? ' Fault' : ' ไม่พร้อม')); lead = S.pumps[S.lead - 1]; lag = S.pumps[2 - S.lead]; }
 
     // phase protection trips everything
     if (!S.phaseOK) S.pumps.forEach(function (p) { if (p.run) { p.run = false; } });
 
-    S.demand = demandAt(S.now) + (S.now < S.boostUntil ? S.demandBoost : 0);
+    S.demand = demandAt(S.now) * S.demandMul + (S.now < S.boostUntil ? S.demandBoost : 0) + (S.dev.ph2 ? 60 : 0);
+    var cabTarget = S.dev.fan ? 33 + S.pm.kw * 0.05 : 52;
+    S.cabTemp += (cabTarget - S.cabTemp) * Math.min(1, dt / 12);
 
     if (c.mode === 'AUTO' && S.phaseOK) {
-      if (!lead.fault && !lead.run) { lead.run = true; lead.freq = Math.max(lead.freq, 25); lead.starts++; logEvent(lead.tag + ' เริ่มทำงาน (Lead)', 'run'); }
+      if (avail(lead) && !lead.run) { lead.run = true; lead.freq = Math.max(lead.freq, 25); lead.starts++; logEvent(lead.tag + ' เริ่มทำงาน (Lead)', 'run'); }
       // staging
-      if (lead.run && !lag.run && !lag.fault) {
+      if (lead.run && !lag.run && avail(lag)) {
         if (lead.freq >= 49.5 && S.pressure < c.sp - c.deadband) {
           S.lagTimer += dt;
           if (S.lagTimer >= c.intervalStart) { lag.run = true; lag.freq = 30; lag.starts++; S.lagTimer = 0; logEvent(lag.tag + ' เริ่มทำงานเสริม — แรงดันไม่ถึง ' + c.sp.toFixed(1) + ' bar ภายใน ' + c.intervalStart + ' วินาที', 'stage'); }
@@ -219,7 +238,8 @@
     var e = c.sp - S.pressure;
     var running0 = S.pumps.filter(function (p) { return p.run; }).length;
     S.pumps.forEach(function (p, i) {
-      if (!p.run || p.fault) { p.run = false; p.freq = Math.max(0, p.freq - 5 * dt); return; }
+      if (p.run && !avail(p)) logEvent(p.tag + ' หยุดโดย Interlock: ' + whyNot(p).join(', '), 'stage');
+      if (!p.run || !avail(p)) { p.run = false; p.freq = Math.max(0, p.freq - 5 * dt); return; }
       var df = 5 * (c.kp * (e - ePrev[i]) + c.kp * dt / Math.max(0.2, c.ti) * e) * (running0 > 1 ? 0.6 : 1);
       df = Math.max(-1.2 * dt, Math.min(1.2 * dt, df));
       p.freq = Math.max(25, Math.min(50, p.freq + df));
@@ -249,7 +269,7 @@
       p.torque = p.freq > 1 ? shaft / (RATED_KW * Math.max(p.freq, 5) / 50) * 100 : 0;
       p.dcbus = 540 + 3 * smoothNoise(S.now / 1000, 5, 11 + p.id) - (p.run ? p.power * 0.05 : 0);
       p.pressure = p.run ? Pm + 0.01 * smoothNoise(S.now / 1000, 4, 20 + p.id) : Pm - 0.02;
-      p.ready = !p.fault && S.phaseOK;
+      p.ready = avail(p);
       if (p.run) {
         p.energy += elec * dt / 3600;
         var saved = Math.max(0, RATED_KW * 0.86 - elec);
@@ -283,10 +303,10 @@
 
   function alternate(reason) {
     var old = S.lead, nl = old === 1 ? 2 : 1;
-    if (S.pumps[nl - 1].fault) return;
+    if (!avail(S.pumps[nl - 1])) return;
     S.lead = nl; S.altStart = S.now;
     var nlp = S.pumps[nl - 1];
-    if (!nlp.run && S.phaseOK) { nlp.run = true; nlp.freq = Math.max(nlp.freq, S.pumps[old - 1].freq || 30); nlp.starts++; }
+    if (!nlp.run && avail(nlp)) { nlp.run = true; nlp.freq = Math.max(nlp.freq, S.pumps[old - 1].freq || 30); nlp.starts++; }
     // the previous lead stops after hand-over unless staging still needs it
     var op = S.pumps[old - 1];
     if (op.run && pumpQ(S.cfg.sp, 49) >= S.demand) op.run = false;
@@ -298,21 +318,22 @@
   var API = {
     state: S, FAULTS: FAULTS, RATED_KW: RATED_KW, RATED_A: RATED_A,
     on: function (fn) { listeners.push(fn); },
-    setConfig: function (patch) { Object.keys(patch).forEach(function (k) { S.cfg[k] = patch[k]; }); lsSet('cfg', S.cfg); },
+    setConfig: function (patch) { if (S.src === 'live') liveSend('config', patch); Object.keys(patch).forEach(function (k) { S.cfg[k] = patch[k]; }); lsSet('cfg', S.cfg); },
     getNotifyCfg: function () { return notifyCfg; },
     setNotifyCfg: function (n) { notifyCfg = n; lsSet('notifyCfg', n); },
     testNotify: function (ch) {
       var item = { id: 'TEST', ch: ch, kind: 'test', sev: 'info', text: 'ทดสอบการแจ้งเตือนจาก CoreDash PumpStation', at: Date.now(), ok: true, ms: 420 };
       S.notifyLog.unshift(item); lsSet('notifyLog', S.notifyLog.slice(0, 200)); emit('notify', item); return item;
     },
-    cmdStart: function (i) { var p = S.pumps[i - 1]; if (p.fault || !S.phaseOK) return false; if (!p.run) { p.run = true; p.freq = Math.max(p.freq, 25); p.starts++; } logEvent(p.tag + ' สั่ง Start (DI01) จาก SCADA', 'cmd'); return true; },
-    cmdStop: function (i) { var p = S.pumps[i - 1]; p.run = false; logEvent(p.tag + ' สั่ง Stop (DI01) จาก SCADA', 'cmd'); return true; },
+    cmdStart: function (i) { if (S.src === 'live') return liveSend('start', { pump: i }); var p = S.pumps[i - 1]; if (!avail(p)) return false; if (!p.run) { p.run = true; p.freq = Math.max(p.freq, 25); p.starts++; } logEvent(p.tag + ' สั่ง Start (DI01) จาก SCADA', 'cmd'); return true; },
+    cmdStop: function (i) { if (S.src === 'live') return liveSend('stop', { pump: i }); var p = S.pumps[i - 1]; p.run = false; logEvent(p.tag + ' สั่ง Stop (DI01) จาก SCADA', 'cmd'); return true; },
     cmdReset: function (i) {
+      if (S.src === 'live') return liveSend('reset', { pump: i });
       var p = S.pumps[i - 1]; if (!p.fault) return false;
       var lf = p.faultLog[0]; if (lf && !lf.cleared) lf.cleared = Date.now();
       p.fault = null; logEvent(p.tag + ' Reset Fault (DI02) จาก SCADA', 'cmd'); return true;
     },
-    alternateNow: function () { alternate('สั่งสลับจาก SCADA'); },
+    alternateNow: function () { if (S.src === 'live') return liveSend('alternate', {}); alternate('สั่งสลับจาก SCADA'); },
     ack: function (id, user) {
       var a = S.alarms.find(function (x) { return x.id === id; }) || S.alarmHistory.find(function (x) { return x.id === id; });
       if (a && !a.ack) { a.ack = { by: user, at: Date.now() }; lsSet('alarmHistory', S.alarmHistory); emit('ack', a); }
@@ -328,9 +349,21 @@
       }
       if (what === 'phase') { S.phaseOK = false; logEvent('จำลอง: Phase Protection ทำงาน', 'demo'); setTimeout(function () { S.phaseOK = true; logEvent('ไฟฟ้ากลับมาปกติ — ระบบเริ่มทำงานอัตโนมัติ', 'info'); }, 25000); }
       if (what === 'comm') { S.comm.fm = false; logEvent('จำลอง: ขาดการสื่อสาร Flowmeter', 'demo'); setTimeout(function () { S.comm.fm = true; logEvent('Flowmeter กลับมาสื่อสารปกติ', 'info'); }, 30000); }
-      if (what === 'clear') { S.demandBoost = 0; S.boostUntil = 0; S.phaseOK = true; Object.keys(S.comm).forEach(function (k) { S.comm[k] = true; }); S.pumps.forEach(function (p) { if (p.fault) API.cmdReset(p.id); }); logEvent('จำลอง: คืนค่าระบบปกติ', 'demo'); }
+      if (what === 'clear') { S.demandBoost = 0; S.boostUntil = 0; S.phaseOK = true; S.demandMul = 1; lsSet('demandMul', 1); S.dev = { sv1: true, dv1: true, sv2: true, dv2: true, ph2: false, mccb1: true, mccb2: true, estop: false, fan: true }; lsSet('dev', S.dev); S.cabTemp = 34; Object.keys(S.comm).forEach(function (k) { S.comm[k] = true; }); S.pumps.forEach(function (p) { if (p.fault) API.cmdReset(p.id); }); logEvent('จำลอง: คืนค่าระบบปกติ', 'demo'); }
     },
-    demandAt: demandAt,
+    demandAt: demandAt, avail: avail, whyNot: whyNot, _emit: emit,
+    setSource: function (src) { S.src = src; lsSet('src', src); if (src === 'live') { S.alarms = []; ruleTimers = {}; } else { S.lastUpdate = Date.now(); } logEvent(src === 'sim' ? 'เปลี่ยนเป็นโหมดจำลอง' : 'เปลี่ยนเป็นโหมดทำงานจริง', 'info'); emit('source', src); },
+    setDevice: function (k, v) {
+      if (S.src === 'live') return false;
+      var NAMES = { sv1: 'วาล์วดูด P-01', dv1: 'วาล์วจ่าย P-01', sv2: 'วาล์วดูด P-02', dv2: 'วาล์วจ่าย P-02', ph2: 'วาล์วสามทาง เฟส 2', mccb1: 'MCCB P-01', mccb2: 'MCCB P-02', estop: 'Emergency Stop', fan: 'พัดลมระบายอากาศตู้', plc: 'PLC FX5U', inv1: 'INV-01 (FMBT-21)', inv2: 'INV-02 (FMBT-21)', pm: 'Power Meter', fm: 'Flowmeter', phase: 'ไฟฟ้า 3 เฟส' };
+      if (k === 'phase') S.phaseOK = !!v;
+      else if (k in S.comm) S.comm[k] = !!v;
+      else if (k === 'demand') { S.demandMul = +v; lsSet('demandMul', S.demandMul); return true; }
+      else { S.dev[k] = !!v; lsSet('dev', S.dev); }
+      var onWord = /^(sv|dv|ph2)/.test(k) ? (v ? 'เปิด' : 'ปิด') : k === 'estop' ? (v ? 'กด' : 'ปลด') : k === 'mccb1' || k === 'mccb2' ? (v ? 'ต่อ' : 'ปลด') : (v ? 'ON' : 'OFF');
+      logEvent('จำลอง: ' + (NAMES[k] || k) + ' → ' + onWord, 'demo');
+      emit('device', { k: k, v: v }); return true;
+    },
     // synthetic history (deterministic) for trends/reports/API
     historyValue: function (point, t) {
       var q = demandAt(t), hh = new Date(t).getHours();
@@ -436,8 +469,9 @@
   logEvent('เชื่อมต่อ PLC FX5U-32MR/DS (192.168.10.10) สำเร็จ', 'info');
   logEvent('P-0' + S.lead + ' เป็นปั๊มหลัก (Lead) — สลับทุก ' + S.cfg.altHours + ' ชม.', 'alt');
 
+  function liveSend(cmd, args) { return !!(global.LIVE && global.LIVE.send(cmd, args)); }
   var last = performance.now();
-  setInterval(function () { var n = performance.now(); var dt = Math.min(2, (n - last) / 1000); last = n; step(dt); }, 1000);
+  setInterval(function () { var n = performance.now(); var dt = Math.min(2, (n - last) / 1000); last = n; if (S.src === 'live') return; step(dt); }, 1000);
 
   API._step = step;
   global.SIM = API;
