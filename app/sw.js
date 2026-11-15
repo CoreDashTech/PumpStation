@@ -1,5 +1,5 @@
 /* CoreDash PumpStation service worker — offline app shell */
-var CACHE = 'cdps-v5';
+var CACHE = 'cdps-v6';
 var SHELL = ['./', 'index.html', 'app.css', 'sim.js', 'core.js', 'pages-ops.js', 'pages-data.js', 'pages-admin.js', 'station3d.js', 'settings.js', 'i18n-dict.js', 'i18n.js', 'live.js', 'points.js', 'replay.js', 'samples/scenario-peak.json', 'samples/scenario-p01-fault.json', 'samples/scenario-power-estop.json', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); })); });
 self.addEventListener('activate', function (e) { e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); })); }).then(function () { return self.clients.claim(); })); });

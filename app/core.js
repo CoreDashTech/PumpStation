@@ -134,7 +134,7 @@
       case 'kwhTotal': return fmt(S.kwhTotal, 0);
       case 'lead': return 'P-0' + S.lead;
       case 'lag': return 'P-0' + (3 - S.lead);
-      case 'altLeft': return dur(c.altHours * 3600 - (S.now - S.altStart) / 1000);
+      case 'altLeft': return c.mode === 'MANUAL' ? 'หยุดนับ · MANUAL' : dur(c.altHours * 3600 - (S.now - S.altStart) / 1000);   // TOR 3.2.3(3): alternation runs in AUTO only
       case 'lagTimer': return fmt(S.lagTimer, 0) + ' / ' + c.intervalStart + ' วิ';
       case 'stopTimer': return fmt(S.stopTimer, 0) + ' / ' + c.intervalStop + ' วิ';
       case 'mode': return c.mode;

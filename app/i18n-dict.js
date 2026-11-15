@@ -1,5 +1,6 @@
 /* CoreDash PumpStation — English dictionary (Thai source → English) */
 window.I18N_DICT = {
+  "หยุดนับ · MANUAL": "Paused · MANUAL",
   "🧪 จำลอง": "🧪 Simulation",
   "📄 ไฟล์ทดสอบ": "📄 Test file",
   "⚡ ทำงานจริง": "⚡ Live",
@@ -62,6 +63,7 @@ window.I18N_DICT = {
   "ความต้องการน้ำเพิ่ม ปั๊มหลักเต็มรอบ": "Demand rising, lead pump at full speed",
   "แรงดันต่ำกว่า SP-Deadband ครบ 30 วินาที → สั่งปั๊มตัวที่ 2": "Pressure below SP − deadband for 30 s → start pump 2",
   "ปั๊ม 2 ตัวรักษา 4.0 bar": "Two pumps hold 4.0 bar",
+  "ปั๊ม 2 ตัวรักษา 4.0 bar (~230 m³/h)": "Two pumps hold 4.0 bar (~230 m³/h)",
   "ความต้องการลดลง": "Demand falling",
   "ถึงค่าตั้งครบ 60 วินาที → ปิดปั๊มตัวที่ 2": "At set-point for 60 s → stop pump 2",
   "P-01 Fault 2310 (กระแสเกิน)": "P-01 fault 2310 (overcurrent)",
@@ -359,6 +361,7 @@ window.I18N_DICT = {
 
 /* Phrase rules for live / composed text (applied longest first) */
 window.I18N_PHRASES = [
+  ["ปั๊ม 2 ตัวเดินพร้อมกันในโหมด MANUAL ขณะใช้น้ำ ", "Both pumps running in MANUAL at "], [" ลบ.ม./ชม. ซึ่งปั๊มตัวเดียวรับได้ — แนะนำหยุด 1 ตัว หรือกลับเป็น AUTO", " m³/h, which one pump can supply — stop one pump or return to AUTO"],
   ["บันทึกจากหน้าจอ", "Recorded from screen"],
   ["ช่วงเวลา", "frames"],
   ["ไม่รู้จัก", "unknown"],
