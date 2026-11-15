@@ -325,15 +325,16 @@
       var item = { id: 'TEST', ch: ch, kind: 'test', sev: 'info', text: 'ทดสอบการแจ้งเตือนจาก CoreDash PumpStation', at: Date.now(), ok: true, ms: 420 };
       S.notifyLog.unshift(item); lsSet('notifyLog', S.notifyLog.slice(0, 200)); emit('notify', item); return item;
     },
-    cmdStart: function (i) { if (S.src === 'live') return liveSend('start', { pump: i }); var p = S.pumps[i - 1]; if (!avail(p)) return false; if (!p.run) { p.run = true; p.freq = Math.max(p.freq, 25); p.starts++; } logEvent(p.tag + ' สั่ง Start (DI01) จาก SCADA', 'cmd'); return true; },
-    cmdStop: function (i) { if (S.src === 'live') return liveSend('stop', { pump: i }); var p = S.pumps[i - 1]; p.run = false; logEvent(p.tag + ' สั่ง Stop (DI01) จาก SCADA', 'cmd'); return true; },
+    cmdStart: function (i) { if (S.src === 'live') return liveSend('start', { pump: i }); if (S.src === 'file') return fileCmd('P-0' + i + ' สั่ง Start'); var p = S.pumps[i - 1]; if (!avail(p)) return false; if (!p.run) { p.run = true; p.freq = Math.max(p.freq, 25); p.starts++; } logEvent(p.tag + ' สั่ง Start (DI01) จาก SCADA', 'cmd'); return true; },
+    cmdStop: function (i) { if (S.src === 'live') return liveSend('stop', { pump: i }); if (S.src === 'file') return fileCmd('P-0' + i + ' สั่ง Stop'); var p = S.pumps[i - 1]; p.run = false; logEvent(p.tag + ' สั่ง Stop (DI01) จาก SCADA', 'cmd'); return true; },
     cmdReset: function (i) {
       if (S.src === 'live') return liveSend('reset', { pump: i });
+      if (S.src === 'file') return fileCmd('P-0' + i + ' Reset Fault');
       var p = S.pumps[i - 1]; if (!p.fault) return false;
       var lf = p.faultLog[0]; if (lf && !lf.cleared) lf.cleared = Date.now();
       p.fault = null; logEvent(p.tag + ' Reset Fault (DI02) จาก SCADA', 'cmd'); return true;
     },
-    alternateNow: function () { if (S.src === 'live') return liveSend('alternate', {}); alternate('สั่งสลับจาก SCADA'); },
+    alternateNow: function () { if (S.src === 'live') return liveSend('alternate', {}); if (S.src === 'file') return fileCmd('สั่งสลับปั๊ม'); alternate('สั่งสลับจาก SCADA'); },
     ack: function (id, user) {
       var a = S.alarms.find(function (x) { return x.id === id; }) || S.alarmHistory.find(function (x) { return x.id === id; });
       if (a && !a.ack) { a.ack = { by: user, at: Date.now() }; lsSet('alarmHistory', S.alarmHistory); emit('ack', a); }
@@ -352,9 +353,9 @@
       if (what === 'clear') { S.demandBoost = 0; S.boostUntil = 0; S.phaseOK = true; S.demandMul = 1; lsSet('demandMul', 1); S.dev = { sv1: true, dv1: true, sv2: true, dv2: true, ph2: false, mccb1: true, mccb2: true, estop: false, fan: true }; lsSet('dev', S.dev); S.cabTemp = 34; Object.keys(S.comm).forEach(function (k) { S.comm[k] = true; }); S.pumps.forEach(function (p) { if (p.fault) API.cmdReset(p.id); }); logEvent('จำลอง: คืนค่าระบบปกติ', 'demo'); }
     },
     demandAt: demandAt, avail: avail, whyNot: whyNot, _emit: emit,
-    setSource: function (src) { S.src = src; lsSet('src', src); if (src === 'live') { S.alarms = []; ruleTimers = {}; } else { S.lastUpdate = Date.now(); } logEvent(src === 'sim' ? 'เปลี่ยนเป็นโหมดจำลอง' : 'เปลี่ยนเป็นโหมดทำงานจริง', 'info'); emit('source', src); },
+    setSource: function (src) { S.src = src; lsSet('src', src); if (src !== 'sim') { S.alarms = []; ruleTimers = {}; } else { S.lastUpdate = Date.now(); S.comm = { plc: true, hmi: true, inv1: true, inv2: true, pm: true, fm: true, sw: true, ups: true, gw: true }; } logEvent({ sim: 'เปลี่ยนเป็นโหมดจำลอง', file: 'เปลี่ยนเป็นโหมดทดสอบด้วยไฟล์ JSON', live: 'เปลี่ยนเป็นโหมดทำงานจริง' }[src], 'info'); emit('source', src); },
     setDevice: function (k, v) {
-      if (S.src === 'live') return false;
+      if (S.src !== 'sim') return false;
       var NAMES = { sv1: 'วาล์วดูด P-01', dv1: 'วาล์วจ่าย P-01', sv2: 'วาล์วดูด P-02', dv2: 'วาล์วจ่าย P-02', ph2: 'วาล์วสามทาง เฟส 2', mccb1: 'MCCB P-01', mccb2: 'MCCB P-02', estop: 'Emergency Stop', fan: 'พัดลมระบายอากาศตู้', plc: 'PLC FX5U', inv1: 'INV-01 (FMBT-21)', inv2: 'INV-02 (FMBT-21)', pm: 'Power Meter', fm: 'Flowmeter', phase: 'ไฟฟ้า 3 เฟส' };
       if (k === 'phase') S.phaseOK = !!v;
       else if (k in S.comm) S.comm[k] = !!v;
@@ -469,10 +470,12 @@
   logEvent('เชื่อมต่อ PLC FX5U-32MR/DS (192.168.10.10) สำเร็จ', 'info');
   logEvent('P-0' + S.lead + ' เป็นปั๊มหลัก (Lead) — สลับทุก ' + S.cfg.altHours + ' ชม.', 'alt');
 
+  function fileCmd(text) { logEvent(text + ' — โหมดไฟล์ทดสอบ: บันทึกคำสั่งไว้ ค่าที่แสดงมาจากไฟล์', 'cmd'); return true; }
   function liveSend(cmd, args) { return !!(global.LIVE && global.LIVE.send(cmd, args)); }
   var last = performance.now();
-  setInterval(function () { var n = performance.now(); var dt = Math.min(2, (n - last) / 1000); last = n; if (S.src === 'live') return; step(dt); }, 1000);
+  setInterval(function () { var n = performance.now(); var dt = Math.min(2, (n - last) / 1000); last = n; if (S.src !== 'sim') return; step(dt); }, 1000);   // live: live.js · file: replay.js
 
   API._step = step;
+  API._evalAlarms = evalAlarms;   // used by replay.js so alarms also fire on JSON test files
   global.SIM = API;
 })(window);

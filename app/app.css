@@ -480,13 +480,22 @@ table.tbl{font-size:16px}
 .modebar .mb-msg{flex:1 1 320px;min-width:0}
 .modebar.is-sim{background:color-mix(in srgb,#F5A524 14%,var(--panel));box-shadow:inset 4px 0 0 #E89B12}
 .modebar.is-live{background:color-mix(in srgb,#22C55E 13%,var(--panel));box-shadow:inset 4px 0 0 #16A34A}
+.modebar.is-file{background:color-mix(in srgb,#3B82F6 12%,var(--panel));box-shadow:inset 4px 0 0 #2563EB}
+.modebar.is-file .mb-tabs button.on{background:#2563EB;color:#fff}
+.rp{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rp-spd button{padding:6px 10px;font-size:14.5px}
+.rp input[type=range]{width:160px;accent-color:#2563EB}
+.rp-t{font-variant-numeric:tabular-nums;font-weight:800;min-width:92px}
+.drop{display:flex;flex-direction:column;align-items:center;gap:4px;padding:26px 16px;border:2px dashed var(--line);border-radius:14px;cursor:pointer;text-align:center;background:var(--bg2,transparent)}
+.drop.over,.drop:hover{border-color:#2563EB;background:color-mix(in srgb,#3B82F6 8%,var(--panel))}
+.drop small{color:var(--muted)}
 .modebar.is-off{background:color-mix(in srgb,#EF4444 11%,var(--panel));box-shadow:inset 4px 0 0 #DC2626}
 .mb-tabs{background:var(--panel)}
 .mb-tabs button{font-size:16px;font-weight:800;padding:8px 16px}
 .modebar.is-sim .mb-tabs button.on{background:#E89B12;color:#fff}
 .modebar.is-live .mb-tabs button.on,.modebar.is-off .mb-tabs button.on{background:#16A34A;color:#fff}
 .modebar.is-off .mb-tabs button.on{background:#DC2626}
-@media (max-width:720px){.modebar{padding:10px 12px;gap:8px}.modebar .mb-msg{font-size:14.5px;flex-basis:100%;order:3}.mb-tabs{flex:1}.mb-tabs button{flex:1;padding:8px 6px;font-size:15px}}
+@media (max-width:720px){.rp{width:100%;order:4}.rp input[type=range]{flex:1;width:auto}.modebar{padding:10px 12px;gap:8px}.modebar .mb-msg{font-size:14.5px;flex-basis:100%;order:3}.mb-tabs{flex:1}.mb-tabs button{flex:1;padding:8px 6px;font-size:15px}}
 .st-valve{cursor:pointer;outline:none}
 .st-valve:hover .vb,.st-valve:focus-visible .vb{filter:brightness(1.25) drop-shadow(0 0 4px #fff)}
 .st-valve.closed .vd{fill:#FFE4E4}
@@ -505,3 +514,9 @@ table.tbl{font-size:16px}
 .simsw input[data-dev="estop"]:checked + .tr{background:#DC2626}
 @media (max-width:1200px){.simgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:720px){.simgrid{grid-template-columns:minmax(0,1fr)}}
+
+.json-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.json-grid>div{display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid var(--line);border-radius:12px}
+.json-grid small{color:var(--muted);font-size:14px;flex:1}
+.json-grid .btn{align-self:flex-start}
+.btn.disabled{opacity:.5;pointer-events:none}

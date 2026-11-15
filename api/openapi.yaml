@@ -8,6 +8,7 @@ info:
     - ระบุจุดตรวจวัด เวลาเริ่มต้น เวลาสิ้นสุด และช่วงเวลารวมข้อมูลได้
     - ยืนยันตัวตนด้วย API Key หรือ Bearer Token · กำหนด/ยกเลิกสิทธิ์ (scope) · จำกัดจำนวนการเรียกต่อนาที
     - ใช้มาตรฐานเปิด ผู้ว่าจ้างใช้งานได้โดยไม่ผูกขาดกับผู้พัฒนา
+    - เข้ารหัสข้อมูลเพิ่มจาก HTTPS ได้ด้วย header X-CD-Encrypt: aes-256-gcm (คำตอบเป็น EncryptedEnvelope)
   contact:
     name: CoreDash Technology
     url: https://coredashtech.github.io/
@@ -24,13 +25,14 @@ tags:
 paths:
   /api/v1/points:
     get:
+      parameters: [ { $ref: '#/components/parameters/Encrypt' } ]
       tags: [Data]
       summary: รายการจุดตรวจวัดทั้งหมด
       description: "scope: read:latest"
       responses:
         '200':
           description: OK
-          headers: { $ref: '#/components/headers/RateLimitGroup' }
+          headers: { X-RateLimit-Remaining: { $ref: '#/components/headers/RateLimitGroup' } }
           content:
             application/json:
               schema:
@@ -47,6 +49,7 @@ paths:
       summary: ค่าล่าสุดของจุดตรวจวัด
       description: "scope: read:latest"
       parameters:
+        - $ref: '#/components/parameters/Encrypt'
         - name: points
           in: query
           description: รหัสจุดตรวจวัด คั่นด้วยจุลภาค (ไม่ระบุ = system.pressure, FT-01.flow, PM-01.kw)
@@ -71,6 +74,7 @@ paths:
       summary: ข้อมูลย้อนหลังตามช่วงเวลา
       description: "scope: read:history · สูงสุด 10,000 จุดข้อมูลต่อคำขอ"
       parameters:
+        - $ref: '#/components/parameters/Encrypt'
         - { name: point, in: query, required: true, schema: { type: string, example: FT-01.flow } }
         - { name: start, in: query, required: true, description: ISO 8601, schema: { type: string, format: date-time, example: '2026-11-13T00:00:00+07:00' } }
         - { name: end, in: query, required: true, description: ISO 8601, schema: { type: string, format: date-time, example: '2026-11-14T00:00:00+07:00' } }
@@ -89,6 +93,7 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
   /api/v1/devices/status:
     get:
+      parameters: [ { $ref: '#/components/parameters/Encrypt' } ]
       tags: [Status]
       summary: สถานะอุปกรณ์ ปั๊ม และการควบคุม
       description: "scope: read:status"
@@ -107,6 +112,7 @@ paths:
       summary: รายการ Alarm
       description: "scope: read:alarms"
       parameters:
+        - $ref: '#/components/parameters/Encrypt'
         - { name: state, in: query, schema: { type: string, enum: [active, all], default: active } }
         - { name: from, in: query, schema: { type: string, format: date-time } }
         - { name: to, in: query, schema: { type: string, format: date-time } }
@@ -127,6 +133,7 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
   /api/v1/meta/last-update:
     get:
+      parameters: [ { $ref: '#/components/parameters/Encrypt' } ]
       tags: [Status]
       summary: เวลาอัปเดตข้อมูลล่าสุด
       description: "scope: read:latest"
@@ -155,13 +162,46 @@ paths:
             schema:
               type: object
               properties:
-                command: { type: string, enum: [start, stop, reset, alternate, config] }
-                args: { type: object, example: { pump: 1 } }
+                command: { type: string, enum: [start, stop, reset, alternate, mode, config] }
+                args:
+                  type: object
+                  description: 'start/stop/reset: {pump: 1|2} · mode: {mode: AUTO|MANUAL} · config: {sp, kp, ti, deadband, intervalStart, intervalStop, altHours, lowAlarm, highAlarm}'
+                  example: { pump: 1 }
       responses:
         '202': { description: รับคำสั่งแล้ว ส่งต่อไปยัง PLC }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { description: คำสั่งขัดกับ Interlock (เช่น E-Stop) }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/export:
+    get:
+      parameters: [ { $ref: '#/components/parameters/Encrypt' } ]
+      tags: [Data]
+      summary: ภาพรวมทุกค่า + ค่าตั้ง + Alarm ที่ค้างอยู่ (ไฟล์ JSON)
+      description: "scope: read:latest · format coredash.snapshot/v1"
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Snapshot' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/sim/scenario:
+    post:
+      tags: [Status]
+      summary: อัปโหลดไฟล์ทดสอบ JSON (เฉพาะเมื่อ Gateway รัน SIMULATE=1)
+      description: "scope: control · วิศวกร/ผู้ดูแลระบบ · ส่ง {reset: true} เพื่อกลับไปใช้ตัวจำลอง"
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/Scenario' } } }
+      responses:
+        '200': { description: โหลดไฟล์แล้ว }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { description: Gateway ไม่ได้อยู่ในโหมดจำลอง }
 components:
+  parameters:
+    Encrypt:
+      name: X-CD-Encrypt
+      in: header
+      required: false
+      description: เข้ารหัสคำตอบด้วย AES-256-GCM
+      schema: { type: string, enum: [aes-256-gcm] }
   securitySchemes:
     ApiKeyAuth: { type: apiKey, in: header, name: X-API-Key }
     BearerAuth: { type: http, scheme: bearer }
@@ -251,6 +291,42 @@ components:
         cleared_at: { type: string, format: date-time, nullable: true }
         ack_by: { type: string, nullable: true }
         ack_at: { type: string, format: date-time, nullable: true }
+    EncryptedEnvelope:
+      type: object
+      description: คำตอบเมื่อขอเข้ารหัส ถอดรหัสแล้วได้ JSON ตามปกติของ endpoint นั้น
+      properties:
+        enc: { type: string, enum: [aes-256-gcm] }
+        kid: { type: string, example: v1 }
+        iv: { type: string, format: byte }
+        tag: { type: string, format: byte, description: GCM authentication tag 16 byte }
+        data: { type: string, format: byte }
+    Snapshot:
+      type: object
+      properties:
+        format: { type: string, example: coredash.snapshot/v1 }
+        site: { type: string, example: PIN6 }
+        generated_at: { type: string, format: date-time }
+        values: { type: object, additionalProperties: true, example: { system.pressure: 4.01, P-01.run: 1 } }
+        settings: { type: object, additionalProperties: true, example: { CTRL.sp: 4.0, CTRL.int_start: 30 } }
+        alarms_active: { type: array, items: { type: string } }
+    Scenario:
+      type: object
+      required: [format, frames]
+      properties:
+        format: { type: string, enum: [coredash.scenario/v1] }
+        description: { type: string }
+        loop: { type: boolean, default: true }
+        interpolate: { type: boolean, default: true }
+        settings: { type: object, additionalProperties: { type: number } }
+        frames:
+          type: array
+          items:
+            type: object
+            required: [t, values]
+            properties:
+              t: { type: number, description: วินาทีนับจากเริ่ม }
+              values: { type: object, additionalProperties: true }
+              note: { type: string }
     Error:
       type: object
       properties:
@@ -258,7 +334,7 @@ components:
           type: object
           properties:
             status: { type: integer }
-            code: { type: string, enum: [INVALID_PARAMETER, RANGE_TOO_LARGE, UNAUTHORIZED, INVALID_API_KEY, FORBIDDEN, NOT_FOUND, POINT_NOT_FOUND, RATE_LIMITED, DEVICE_OFFLINE, INTERNAL_ERROR] }
+            code: { type: string, enum: [INVALID_PARAMETER, RANGE_TOO_LARGE, UNAUTHORIZED, INVALID_API_KEY, FORBIDDEN, NOT_FOUND, POINT_NOT_FOUND, RATE_LIMITED, INTERLOCK, ENCRYPTION_NOT_CONFIGURED, ENCRYPTION_NOT_ALLOWED, NOT_SIMULATING, DEVICE_OFFLINE, INTERNAL_ERROR] }
             message: { type: string }
   responses:
     BadRequest: { description: พารามิเตอร์ไม่ถูกต้อง, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }

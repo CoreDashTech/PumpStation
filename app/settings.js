@@ -1,7 +1,7 @@
 /* CoreDash PumpStation — appearance & language settings */
 (function () {
   'use strict';
-  var A = APP, $ = A.$, $$ = A.$$, esc = A.esc;
+  var A = APP, $ = A.$, $$ = A.$$, esc = A.esc, S = SIM.state;
   var LIGHT = ['cream', 'pearl', 'softwhite', 'sage'];
   var BGS = [
     { id: 'cream', name: 'ครีม', sub: 'Classic Cream', light: true },
@@ -64,6 +64,39 @@
         '<div class="muted" style="font-size:13px;margin:16px 0 8px">ปรับสีทีละส่วน</div><div class="col-pick">' +
         STATION.KEYS.map(function (k) { return '<label class="colk"><input type="color" data-ck="' + k + '" value="' + cols[k] + '"><span>' + STATION.KEY_LABEL[k] + '</span></label>'; }).join('') + '</div>' +
         '<div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost sm" id="stReset">คืนค่าสีเริ่มต้น</button></div></div>';
+      // ---- JSON files: export / import / record a test file ----
+      var recInfo = window.REPLAY && REPLAY.recording();
+      v.insertAdjacentHTML('beforeend', '<div class="card" style="margin-top:16px" id="jsonCard"><div class="card-h"><h3>ไฟล์ข้อมูล JSON</h3><a class="btn sm" href="#/api">REST API →</a></div>' +
+        '<p class="muted" style="margin-top:0">ข้อมูลทุกจุดใช้ชื่อเดียวกับ REST API และ Edge Gateway (เช่น system.pressure, P-01.freq, CTRL.sp) เปิดไฟล์ด้วยโปรแกรมใดก็ได้</p>' +
+        '<div class="json-grid">' +
+        '<div><b>ส่งออกภาพรวม</b><small>ค่าล่าสุดทุกจุด + ค่าตั้ง + Alarm ที่ค้างอยู่</small><button class="btn sm" id="jsSnap">⬇ ดาวน์โหลด JSON</button></div>' +
+        '<div><b>ส่งออกค่าตั้ง</b><small>Setpoint, PID, Interval, รอบสลับ, เกณฑ์ Alarm</small><button class="btn sm" id="jsCfgOut">⬇ ดาวน์โหลด JSON</button></div>' +
+        '<div><b>นำเข้าค่าตั้ง</b><small>' + (A.can('setpoint') ? 'โหลดค่าตั้งจากไฟล์ (มีหน้ายืนยันก่อนใช้)' : 'เฉพาะผู้มีสิทธิ์ตั้งค่า PID / Interval') + '</small><label class="btn sm' + (A.can('setpoint') ? '' : ' disabled') + '">⬆ เลือกไฟล์<input type="file" id="jsCfgIn" accept=".json" hidden' + (A.can('setpoint') ? '' : ' disabled') + '></label></div>' +
+        '<div><b>บันทึกเป็นไฟล์ทดสอบ</b><small>อัดค่าจากหน้าจอทุก 2 วินาที แล้วนำไปเล่นซ้ำในโหมดไฟล์ทดสอบ</small><button class="btn sm' + (recInfo ? ' primary' : '') + '" id="jsRec">' + (recInfo ? '⏹ หยุดและดาวน์โหลด (' + recInfo.frames + ')' : '⏺ เริ่มบันทึก') + '</button></div>' +
+        '<div><b>ทดสอบด้วยไฟล์</b><small>อัปโหลดไฟล์ JSON ให้ทุกหน้าจอแสดงค่าตามไฟล์</small><button class="btn sm" id="jsOpen">📂 เปิดโหมดไฟล์ทดสอบ</button></div>' +
+        '</div></div>');
+      $('#jsSnap', v).onclick = function () { REPLAY.exportSnapshot(); A.toast('ดาวน์โหลดแล้ว', 'ภาพรวมระบบ (JSON)', 'ok'); };
+      $('#jsCfgOut', v).onclick = function () { REPLAY.exportSettings(); A.toast('ดาวน์โหลดแล้ว', 'ค่าตั้ง (JSON)', 'ok'); };
+      $('#jsCfgIn', v).onchange = function () {
+        var f = this.files[0]; if (!f) return; var fr = new FileReader();
+        fr.onload = function () {
+          var x; try { x = JSON.parse(fr.result); } catch (e) { return A.toast('อ่านไฟล์ไม่ได้', e.message, 'warning'); }
+          var p = POINTS.toCfg(x.settings || x), keys = Object.keys(p);
+          if (!keys.length) return A.toast('ไม่พบค่าตั้งในไฟล์', 'ต้องมี settings เช่น "CTRL.sp": 4.0', 'warning');
+          A.confirmBox('นำเข้าค่าตั้ง ' + keys.length + ' รายการ?', keys.map(function (k) { return esc(k) + ': <b>' + esc(S.cfg[k]) + '</b> → <b>' + esc(p[k]) + '</b>'; }).join('<br>'), 'นำเข้า').then(function (ok) {
+            if (!ok) return;
+            REPLAY.importSettings(fr.result); A.audit('ตั้งค่า', 'นำเข้าค่าตั้งจากไฟล์ JSON ' + keys.length + ' รายการ');
+            A.toast('นำเข้าค่าตั้งแล้ว', keys.length + ' รายการ' + (S.src === 'live' ? ' · ส่งไป PLC แล้ว' : ''), 'ok');
+          });
+        };
+        fr.readAsText(f);
+      };
+      $('#jsRec', v).onclick = function () {
+        if (REPLAY.recording()) { var n = REPLAY.stopRecord(); A.toast('บันทึกไฟล์ทดสอบแล้ว', n + ' ช่วงเวลา', 'ok'); }
+        else { REPLAY.startRecord(2); A.toast('เริ่มบันทึก', 'กดอีกครั้งเพื่อหยุดและดาวน์โหลด', 'info'); }
+        self.render(v);
+      };
+      $('#jsOpen', v).onclick = function () { A.fileModal(); };
       $$('[data-lang]', v).forEach(function (b) { b.onclick = function () { if (window.I18N) I18N.set(b.getAttribute('data-lang')); self.render(v); }; });
       $$('[data-theme-set]', v).forEach(function (b) { b.onclick = function () { var want = b.getAttribute('data-theme-set'), x = get(), isL = LIGHT.indexOf(x.bg) >= 0; if ((want === 'light') !== isL) { x.bg = want === 'light' ? (x.lastLight || 'cream') : (x.lastDark || 'grid'); save(x); } self.render(v); }; });
       $$('[data-bg]', v).forEach(function (b) { b.onclick = function () { var x = get(); x.bg = b.getAttribute('data-bg'); save(x); self.render(v); }; });

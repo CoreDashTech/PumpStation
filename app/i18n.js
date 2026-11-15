@@ -32,7 +32,7 @@
   function doEl(el) {
     for (var i = 0; i < ATTRS.length; i++) {
       var a = el.getAttribute && el.getAttribute(ATTRS[i]);
-      if (a && TH.test(a)) { var key = 'data-th-' + ATTRS[i]; if (!el.hasAttribute(key)) el.setAttribute(key, a); el.setAttribute(ATTRS[i], tr(a)); }
+      if (a && TH.test(a)) { var t = tr(a); if (t === a) continue; var key = 'data-th-' + ATTRS[i]; if (!el.hasAttribute(key)) el.setAttribute(key, a); el.setAttribute(ATTRS[i], t); }   // write only on change: an untranslated label must not re-trigger the observer
     }
   }
   function walk(root) {

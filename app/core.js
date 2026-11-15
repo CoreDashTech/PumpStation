@@ -181,24 +181,74 @@
       var raw = parseFloat(val(k).replace(/,/g, '')); el.style.width = Math.max(0, Math.min(100, raw / mx * 100)) + '%';
     });
     var lp = $('#livePill');
-    if (lp) { var st = S.src === 'sim' ? ['warn', 'โหมดจำลอง'] : offline() ? ['bad', 'ไม่ได้เชื่อมต่อ'] : ['ok', 'PLC ออนไลน์']; var d = lp.querySelector('.dot'); d.className = 'dot pulse ' + st[0]; var t = lp.querySelector('.lp-t'); if (t.getAttribute('data-k') !== st[1]) { t.setAttribute('data-k', st[1]); t.textContent = st[1]; } }
+    if (lp) { var st = S.src === 'sim' ? ['warn', 'โหมดจำลอง'] : S.src === 'file' ? ['warn', 'ไฟล์ทดสอบ'] : offline() ? ['bad', 'ไม่ได้เชื่อมต่อ'] : ['ok', 'PLC ออนไลน์']; var d = lp.querySelector('.dot'); d.className = 'dot pulse ' + st[0]; var t = lp.querySelector('.lp-t'); if (t.getAttribute('data-k') !== st[1]) { t.setAttribute('data-k', st[1]); t.textContent = st[1]; } }
     drawModebar();
     var b = $('.bell .badge'); if (b) b.hidden = S.alarms.length === 0;
     $$('.nav-a[data-r="alarms"] .cnt, .bottom [data-r="alarms"] .cnt').forEach(function (el) { el.textContent = S.alarms.length; el.hidden = !S.alarms.length; });
   }
 
-  // ---------- mode bar (Simulation / Live)
+  // ---------- mode bar (Simulation / JSON test file / Live)
   var mbState = '';
+  var SAMPLES = [['scenario-peak.json', 'ช่วงพีคเช้า · ปั๊มตัวที่ 2 เดินเสริม'], ['scenario-p01-fault.json', 'P-01 Fault → ปั๊มสำรองรับงาน'], ['scenario-power-estop.json', 'ไฟขาดเฟส + Emergency Stop']];
+  function mmss(x) { x = Math.max(0, Math.round(x)); return Math.floor(x / 60) + ':' + ('0' + x % 60).slice(-2); }
   function drawModebar() {
     var mb = $('#modebar'); if (!mb) return;
-    var sim = S.src === 'sim', conn = !sim && window.LIVE && LIVE.connected(), key = S.src + (conn ? 1 : 0) + (window.LIVE ? LIVE.cfg().url : '');
-    if (key === mbState) return; mbState = key;
-    mb.className = 'modebar ' + (sim ? 'is-sim' : conn ? 'is-live' : 'is-off');
-    var right = sim
-      ? '<span class="mb-msg"><b>โหมดจำลอง</b> · ข้อมูลจากตัวจำลอง สั่งเปิด/ปิดปั๊ม วาล์ว และอุปกรณ์ทุกตัวได้ ระบบตอบสนองเหมือนจริง</span><a class="btn sm" href="#/station">🧪 แผงจำลองอุปกรณ์</a>'
-      : conn ? '<span class="mb-msg"><b>ทำงานจริง</b> · เชื่อมต่อ Edge Gateway ' + esc(LIVE.cfg().url) + ' แล้ว คำสั่งจะส่งไปยัง PLC จริง</span><button class="btn sm" data-livecfg>ตั้งค่าการเชื่อมต่อ</button>'
+    var src = S.src, conn = src === 'live' && window.LIVE && LIVE.connected();
+    var info = src === 'file' && window.REPLAY ? REPLAY.info() : null;
+    var key = src + (conn ? 1 : 0) + (window.LIVE ? LIVE.cfg().url : '') + (info ? info.name + info.playing + info.speed : '');
+    if (key !== mbState) {
+      mbState = key;
+      mb.className = 'modebar ' + (src === 'sim' ? 'is-sim' : src === 'file' ? 'is-file' : conn ? 'is-live' : 'is-off');
+      var right;
+      if (src === 'sim') right = '<span class="mb-msg"><b>โหมดจำลอง</b> · ข้อมูลจากตัวจำลอง สั่งเปิด/ปิดปั๊ม วาล์ว และอุปกรณ์ทุกตัวได้ ระบบตอบสนองเหมือนจริง</span><a class="btn sm" href="#/station">🧪 แผงจำลองอุปกรณ์</a>';
+      else if (src === 'file') right = info
+        ? '<span class="mb-msg"><b>ไฟล์ทดสอบ</b> · ' + esc(info.name) + ' <span class="muted" id="rpNoteW" hidden>· <span id="rpNote"></span></span></span>' +
+          '<div class="rp"><button class="btn sm" data-rp="play" aria-label="เล่น/หยุด">' + (info.playing ? '⏸ หยุด' : '▶ เล่น') + '</button>' +
+          '<div class="tabs rp-spd" role="group" aria-label="ความเร็ว">' + [1, 5, 20].map(function (x) { return '<button data-rp-spd="' + x + '" class="' + (info.speed === x ? 'on' : '') + '">×' + x + '</button>'; }).join('') + '</div>' +
+          '<input type="range" id="rpBar" min="0" max="' + info.duration + '" step="1" value="0" aria-label="ตำแหน่ง"><span class="rp-t" id="rpT"></span>' +
+          '<button class="btn sm" data-rp="open">📂 เลือกไฟล์</button></div>'
+        : '<span class="mb-msg"><b>ไฟล์ทดสอบ</b> · อัปโหลดไฟล์ JSON เพื่อให้หน้าจอทั้งหมดแสดงค่าตามไฟล์ — ทดสอบหน้าจอ ค่าตั้ง และ Alarm ได้โดยไม่ต้องต่ออุปกรณ์</span><button class="btn sm primary" data-rp="open">📂 เลือกไฟล์ JSON</button>';
+      else right = conn ? '<span class="mb-msg"><b>ทำงานจริง</b> · เชื่อมต่อ Edge Gateway ' + esc(LIVE.cfg().url) + ' แล้ว คำสั่งจะส่งไปยัง PLC จริง</span><button class="btn sm" data-livecfg>ตั้งค่าการเชื่อมต่อ</button>'
         : '<span class="mb-msg"><b>ทำงานจริง</b> · ' + (LIVE && LIVE.cfg().url ? 'เชื่อมต่อ Edge Gateway ไม่ได้' : 'ยังไม่ได้ตั้งค่า Edge Gateway') + ' — ค่าจะแสดงเมื่อเชื่อมต่ออุปกรณ์จริง สั่งงานไม่ได้</span><button class="btn sm primary" data-livecfg>ตั้งค่าการเชื่อมต่อ</button>';
-    mb.innerHTML = '<div class="tabs mb-tabs" role="group" aria-label="แหล่งข้อมูล"><button data-src="sim" class="' + (sim ? 'on' : '') + '" aria-pressed="' + sim + '">🧪 โหมดจำลอง</button><button data-src="live" class="' + (!sim ? 'on' : '') + '" aria-pressed="' + !sim + '">⚡ ทำงานจริง</button></div>' + right;
+      var tab = function (k, label) { return '<button data-src="' + k + '" class="' + (src === k ? 'on' : '') + '" aria-pressed="' + (src === k) + '">' + label + '</button>'; };
+      mb.innerHTML = '<div class="tabs mb-tabs" role="group" aria-label="แหล่งข้อมูล">' + tab('sim', '🧪 จำลอง') + tab('file', '📄 ไฟล์ทดสอบ') + tab('live', '⚡ ทำงานจริง') + '</div>' + right;
+      var bar = $('#rpBar', mb); if (bar) bar.oninput = function () { REPLAY.seek(Number(bar.value)); };
+    }
+    if (info) {
+      var bar2 = $('#rpBar', mb), tt = $('#rpT', mb), nt = $('#rpNote', mb);
+      if (bar2 && document.activeElement !== bar2) bar2.value = Math.round(info.t);
+      if (tt) tt.textContent = mmss(info.t) + ' / ' + mmss(info.duration);
+      if (nt) { if (nt.getAttribute('data-n') !== info.note) { nt.setAttribute('data-n', info.note); nt.textContent = info.note; } nt.parentNode.hidden = !info.note; }
+    }
+  }
+  // file picker + samples for the JSON test mode
+  function fileModal() {
+    modal('<h3>ทดสอบด้วยไฟล์ JSON</h3><p class="muted" style="margin-top:0">ค่าในไฟล์จะแสดงบนแดชบอร์ด สถานี 3 มิติ กราฟ และตรวจ Alarm เหมือนข้อมูลจาก PLC จริง ไฟล์เดียวกันใช้ทดสอบ Edge Gateway ได้ด้วย</p>' +
+      '<label class="drop" id="rpDrop"><input type="file" id="rpFile" accept=".json,application/json" hidden><b>📂 เลือกไฟล์ หรือลากไฟล์มาวางที่นี่</b><small>รูปแบบ coredash.scenario/v1 · ขนาดไม่เกิน 5 MB</small></label>' +
+      '<div id="rpErr" class="muted" role="alert"></div>' +
+      '<div class="card-h" style="margin-top:14px"><h3 style="font-size:17px">หรือใช้ไฟล์ตัวอย่าง</h3></div><div class="stack" style="gap:8px">' +
+      SAMPLES.map(function (x) { return '<div class="row" style="justify-content:space-between"><span>' + esc(x[1]) + '</span><span class="row" style="gap:6px"><button class="btn sm primary" data-sample="' + x[0] + '">ทดสอบ</button><a class="btn sm" href="samples/' + x[0] + '" download>ดาวน์โหลด</a></span></div>'; }).join('') +
+      '</div><div class="row" style="justify-content:space-between;margin-top:18px"><button class="btn sm ghost" id="rpTpl">⬇ แม่แบบไฟล์ (จากค่าปัจจุบัน)</button><button class="btn ghost" data-close>ปิด</button></div>',
+      function (el, close) {
+        function done(r) {
+          if (!r.ok) { $('#rpErr', el).innerHTML = '<span style="color:var(--red);font-weight:800">✕ ใช้ไฟล์นี้ไม่ได้</span><ul style="margin:6px 0 0 18px">' + r.errors.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>'; return; }
+          if (S.src !== 'file') SIM.setSource('file');
+          audit('ทดสอบ', 'โหลดไฟล์ทดสอบ JSON (' + r.frames + ' frames, ' + r.duration + ' วินาที)');
+          toast('โหลดไฟล์ทดสอบแล้ว', r.frames + ' ช่วงเวลา · ' + mmss(r.duration) + ' นาที' + (r.unknown.length ? ' · ไม่รู้จัก ' + r.unknown.length + ' จุด: ' + r.unknown.slice(0, 3).join(', ') : ''), r.unknown.length ? 'warning' : 'ok');
+          mbState = ''; close(); route();
+        }
+        function read(f) {
+          if (!f) return; if (f.size > 5e6) return done({ ok: false, errors: ['ไฟล์ใหญ่เกิน 5 MB'] });
+          var fr = new FileReader(); fr.onload = function () { done(REPLAY.loadText(fr.result, f.name)); }; fr.readAsText(f);
+        }
+        var inp = $('#rpFile', el), drop = $('#rpDrop', el);
+        inp.onchange = function () { read(inp.files[0]); };
+        drop.ondragover = function (e) { e.preventDefault(); drop.classList.add('over'); };
+        drop.ondragleave = function () { drop.classList.remove('over'); };
+        drop.ondrop = function (e) { e.preventDefault(); drop.classList.remove('over'); read(e.dataTransfer.files[0]); };
+        $$('[data-sample]', el).forEach(function (b) { b.onclick = function () { REPLAY.loadSample(b.getAttribute('data-sample')).then(done).catch(function (e) { done({ ok: false, errors: ['โหลดตัวอย่างไม่ได้: ' + e.message] }); }); }; });
+        $('#rpTpl', el).onclick = function () { REPLAY.sampleTemplate(); };
+      });
   }
   function liveCfgModal() {
     var c = LIVE.cfg();
@@ -214,14 +264,19 @@
   }
   function setSource(src) {
     if (src === S.src) return;
-    SIM.setSource(src); audit('ตั้งค่า', src === 'sim' ? 'เปลี่ยนเป็นโหมดจำลอง' : 'เปลี่ยนเป็นโหมดทำงานจริง');
-    toast(src === 'sim' ? 'เปลี่ยนเป็นโหมดจำลอง' : 'เปลี่ยนเป็นโหมดทำงานจริง', src === 'sim' ? 'ทดลองสั่งอุปกรณ์ได้ทุกตัว ไม่กระทบระบบจริง' : 'อ่านค่าและสั่งงานผ่าน Edge Gateway', 'info');
+    var T = { sim: ['เปลี่ยนเป็นโหมดจำลอง', 'ทดลองสั่งอุปกรณ์ได้ทุกตัว ไม่กระทบระบบจริง'], file: ['เปลี่ยนเป็นโหมดทดสอบด้วยไฟล์ JSON', 'หน้าจอแสดงค่าตามไฟล์ที่อัปโหลด'], live: ['เปลี่ยนเป็นโหมดทำงานจริง', 'อ่านค่าและสั่งงานผ่าน Edge Gateway'] }[src];
+    SIM.setSource(src); audit('ตั้งค่า', T[0]);
+    toast(T[0], T[1], 'info');
     if (src === 'live' && window.LIVE) LIVE.poll();
+    if (src === 'file' && window.REPLAY) { REPLAY.restore(); if (!REPLAY.loaded()) setTimeout(fileModal, 50); }
     mbState = ''; route();
   }
   document.addEventListener('click', function (e) {
     var b = e.target.closest('[data-src]'); if (b && b.closest('#modebar')) setSource(b.getAttribute('data-src'));
     if (e.target.closest('[data-livecfg]')) liveCfgModal();
+    var rp = e.target.closest('[data-rp]');
+    if (rp) { var k = rp.getAttribute('data-rp'); if (k === 'open') fileModal(); if (k === 'play') { REPLAY.play(); mbState = ''; drawModebar(); } }
+    var sp = e.target.closest('[data-rp-spd]'); if (sp) { REPLAY.setSpeed(Number(sp.getAttribute('data-rp-spd'))); mbState = ''; drawModebar(); }
   });
 
   // ---------- gauge (240° arc)
@@ -332,6 +387,7 @@
   function spark(data, color, w, h) {
     w = w || 96; h = h || 30;
     if (!data.length) return '';
+    if (data.length === 1) data = [data[0], data[0]];   // one point (just after a test file loads) → flat line
     var mn = Math.min.apply(null, data), mx = Math.max.apply(null, data), d = '';
     data.forEach(function (v, i) { d += (i ? 'L' : 'M') + (i / (data.length - 1) * w).toFixed(1) + ' ' + (h - 2 - (v - mn) / ((mx - mn) || 1) * (h - 4)).toFixed(1); });
     return '<svg class="spark" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true"><path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linejoin="round"/></svg>';
@@ -445,6 +501,6 @@
     $: $, $$: $$, esc: esc, fmt: fmt, tFmt: tFmt, dFmt: dFmt, dtFmt: dtFmt, dur: dur, ic: ic, pad: pad,
     PAGES: PAGES, isEn: isEn, offline: offline, liveCfgModal: function () { liveCfgModal(); }, EN_M: EN_M, ROLES: ROLES, PERM: PERM, PERM_LABEL: PERM_LABEL, can: can, audit: audit, session: function () { return session; },
     users: function () { return users; }, setUsers: function (u) { users = u; saveUsers(); }, auditLog: function () { return auditLog; },
-    setTheme: setTheme, route: function () { route(); }, buildNav: function () { buildNav(); }, toast: toast, modal: modal, confirmBox: confirmBox, csv: csv, val: val, bindLive: bindLive, gauge: gauge, lineChart: lineChart, barChart: barChart, spark: spark, statusOf: statusOf, ls: ls, lsSet: lsSet
+    fileModal: fileModal, setTheme: setTheme, route: function () { route(); }, buildNav: function () { buildNav(); }, toast: toast, modal: modal, confirmBox: confirmBox, csv: csv, val: val, bindLive: bindLive, gauge: gauge, lineChart: lineChart, barChart: barChart, spark: spark, statusOf: statusOf, ls: ls, lsSet: lsSet
   };
 })(window);
